@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { cn } from "@/lib/utils";
-
-/* ------------------------------------------------------------------ */
-/*  SB / UCSB news                                                     */
-/* ------------------------------------------------------------------ */
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cn, clamp, lerp } from "@/lib/utils";
 
 const SB_NEWS = [
   "Two UCSB professors won the 2025 Nobel Prize in Physics",
@@ -25,11 +21,15 @@ const SB_NEWS = [
   "UCSB ranked #14 public university in the nation for 2026",
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Bird SVG                                                           */
-/* ------------------------------------------------------------------ */
-
-function BirdSvg({ size = 16, className, flapSpeed = 0.35 }: { size?: number; className?: string; flapSpeed?: number }) {
+function BirdSvg({
+  size = 16,
+  className,
+  flapSpeed = 0.35,
+}: {
+  size?: number;
+  className?: string;
+  flapSpeed?: number;
+}) {
   return (
     <svg
       width={size}
@@ -37,9 +37,10 @@ function BirdSvg({ size = 16, className, flapSpeed = 0.35 }: { size?: number; cl
       viewBox="0 0 24 14"
       fill="none"
       className={className}
-      style={{ overflow: "visible", "--flap-speed": `${flapSpeed}s` } as React.CSSProperties}
+      style={
+        { overflow: "visible", "--flap-speed": `${flapSpeed}s` } as React.CSSProperties
+      }
     >
-      {/* Left wing */}
       <path
         className="bird-wing-l"
         d="M12 8 Q9 5 6 2 Q4 0.5 1 2.5"
@@ -49,7 +50,6 @@ function BirdSvg({ size = 16, className, flapSpeed = 0.35 }: { size?: number; cl
         fill="none"
         style={{ transformOrigin: "12px 8px" }}
       />
-      {/* Right wing */}
       <path
         className="bird-wing-r"
         d="M12 8 Q15 5 18 2 Q20 0.5 23 2.5"
@@ -59,15 +59,10 @@ function BirdSvg({ size = 16, className, flapSpeed = 0.35 }: { size?: number; cl
         fill="none"
         style={{ transformOrigin: "12px 8px" }}
       />
-      {/* Body */}
-      <ellipse cx="12" cy="8.5" rx="1.8" ry="1" fill="currentColor" opacity="0.5" />
+      <ellipse cx="12" cy="8.5" rx="1.8" ry="1" fill="currentColor" opacity="0.52" />
     </svg>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Flock birds — lots of them, lower in the sky                       */
-/* ------------------------------------------------------------------ */
 
 interface BirdConfig {
   id: number;
@@ -81,159 +76,261 @@ interface BirdConfig {
 }
 
 const BIRDS: BirdConfig[] = [
-  { id: 0,  size: 18, y: 32, speed: 20, delay: 0,    direction: 1,  bobAmp: 10, opacity: 0.45 },
-  { id: 1,  size: 22, y: 38, speed: 16, delay: -4,   direction: -1, bobAmp: 14, opacity: 0.55 },
-  { id: 2,  size: 15, y: 28, speed: 24, delay: -9,   direction: 1,  bobAmp: 8,  opacity: 0.35 },
-  { id: 3,  size: 24, y: 42, speed: 14, delay: -2,   direction: 1,  bobAmp: 16, opacity: 0.6 },
-  { id: 4,  size: 17, y: 35, speed: 22, delay: -7,   direction: -1, bobAmp: 11, opacity: 0.4 },
-  { id: 5,  size: 13, y: 25, speed: 28, delay: -15,  direction: 1,  bobAmp: 7,  opacity: 0.3 },
-  { id: 6,  size: 20, y: 44, speed: 18, delay: -5,   direction: -1, bobAmp: 13, opacity: 0.5 },
-  { id: 7,  size: 14, y: 30, speed: 26, delay: -12,  direction: 1,  bobAmp: 9,  opacity: 0.35 },
-  { id: 8,  size: 19, y: 40, speed: 15, delay: -1,   direction: 1,  bobAmp: 12, opacity: 0.5 },
-  { id: 9,  size: 16, y: 36, speed: 21, delay: -8,   direction: -1, bobAmp: 10, opacity: 0.4 },
-  { id: 10, size: 12, y: 22, speed: 30, delay: -18,  direction: 1,  bobAmp: 6,  opacity: 0.25 },
-  { id: 11, size: 21, y: 46, speed: 17, delay: -3,   direction: -1, bobAmp: 14, opacity: 0.55 },
+  { id: 0, size: 18, y: 30, speed: 20, delay: 0, direction: 1, bobAmp: 10, opacity: 0.38 },
+  { id: 1, size: 22, y: 37, speed: 16, delay: -4, direction: -1, bobAmp: 14, opacity: 0.5 },
+  { id: 2, size: 15, y: 26, speed: 24, delay: -9, direction: 1, bobAmp: 8, opacity: 0.26 },
+  { id: 3, size: 24, y: 41, speed: 14, delay: -2, direction: 1, bobAmp: 16, opacity: 0.52 },
+  { id: 4, size: 17, y: 34, speed: 22, delay: -7, direction: -1, bobAmp: 11, opacity: 0.34 },
+  { id: 5, size: 13, y: 24, speed: 28, delay: -15, direction: 1, bobAmp: 7, opacity: 0.22 },
+  { id: 6, size: 20, y: 45, speed: 18, delay: -5, direction: -1, bobAmp: 13, opacity: 0.44 },
+  { id: 7, size: 14, y: 29, speed: 26, delay: -12, direction: 1, bobAmp: 9, opacity: 0.24 },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Dive sequence phases                                               */
-/* ------------------------------------------------------------------ */
+const MESSENGER_PERCH = { x: 80, y: 17.5 };
 
-type DivePhase = "diving" | "splash" | "rising" | "showing" | "fading";
+type MessengerPhase = "diving" | "lifting" | "showing" | "returning";
 
-interface DiveState {
-  birdId: number;
-  phase: DivePhase;
-  x: number;           // % horizontal position of the dive
+interface MessengerState {
+  phase: MessengerPhase;
+  x: number;
+  y: number;
+  rotation: number;
+  cardOpacity: number;
   newsText: string;
-  risingY: number;     // animated Y position during rise (%)
-  driftX: number;      // horizontal drift offset (%)
 }
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
 
 interface SkyBirdsProps {
   horizonPct: number;
 }
 
+function easeInOutCubic(value: number) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 - Math.pow(-2 * value + 2, 3) / 2;
+}
+
+function easeOutCubic(value: number) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function easeInCubic(value: number) {
+  return value * value * value;
+}
+
 export function SkyBirds({ horizonPct }: SkyBirdsProps) {
-  const [dive, setDive] = useState<DiveState | null>(null);
-  const newsIdxRef = useRef(Math.floor(Math.random() * SB_NEWS.length));
+  const [messenger, setMessenger] = useState<MessengerState | null>(null);
+  const [showSplash, setShowSplash] = useState(false);
+  const newsIdxRef = useRef(0);
   const rafRef = useRef<number>(0);
-  const diveStartRef = useRef(0);
+  const timersRef = useRef<number[]>([]);
+  const runningRef = useRef(false);
+  const cycleRef = useRef(0);
 
-  /* Animate the rising bird + news after splash, then drift */
-  const animateRise = useCallback((startTime: number, x: number, newsText: string, birdId: number) => {
-    const targetY = horizonPct - 22; // rise to 22% above horizon
-    const riseDuration = 1200; // ms to rise
-    const driftSpeed = 0.4; // % per second horizontal drift
-    const driftDir = Math.random() > 0.5 ? 1 : -1;
+  const clearTimers = useCallback(() => {
+    for (const id of timersRef.current) {
+      window.clearTimeout(id);
+    }
+    timersRef.current = [];
+  }, []);
 
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / riseDuration);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - t, 3);
-      const currentY = horizonPct - eased * (horizonPct - targetY);
+  const schedule = useCallback((callback: () => void, delay: number) => {
+    const id = window.setTimeout(callback, delay);
+    timersRef.current.push(id);
+    return id;
+  }, []);
 
-      // After rise completes, gently drift horizontally
-      const driftElapsed = Math.max(0, elapsed - riseDuration) / 1000;
-      const drift = driftElapsed * driftSpeed * driftDir;
+  const animateSegment = useCallback(
+    (
+      cycleId: number,
+      duration: number,
+      updater: (progress: number) => void,
+    ) =>
+      new Promise<void>((resolve) => {
+        const start = performance.now();
 
-      setDive({ birdId, phase: t < 1 ? "rising" : "showing", x, newsText, risingY: currentY, driftX: drift });
+        const frame = (now: number) => {
+          if (cycleRef.current !== cycleId) {
+            resolve();
+            return;
+          }
 
-      // Keep animating for drift (until fading phase clears us)
-      rafRef.current = requestAnimationFrame(step);
-    };
-    rafRef.current = requestAnimationFrame(step);
-  }, [horizonPct]);
+          const progress = clamp((now - start) / duration, 0, 1);
+          updater(progress);
 
-  const triggerDive = useCallback(() => {
-    // Don't interrupt an active dive
-    if (dive && dive.phase !== "fading") return;
+          if (progress >= 1) {
+            resolve();
+            return;
+          }
 
-    const bird = BIRDS[Math.floor(Math.random() * BIRDS.length)];
-    const x = 25 + Math.random() * 50;
-    const idx = newsIdxRef.current;
-    newsIdxRef.current = (idx + 1) % SB_NEWS.length;
-    const newsText = SB_NEWS[idx];
+          rafRef.current = window.requestAnimationFrame(frame);
+        };
 
-    // Phase 1: Dive (1s)
-    setDive({ birdId: bird.id, phase: "diving", x, newsText, risingY: horizonPct, driftX: 0 });
+        rafRef.current = window.requestAnimationFrame(frame);
+      }),
+    [],
+  );
 
-    // Phase 2: Splash (at 1s)
-    setTimeout(() => {
-      setDive((prev) => prev ? { ...prev, phase: "splash" } : null);
-    }, 1000);
+  const sleep = useCallback(
+    (cycleId: number, duration: number) =>
+      new Promise<void>((resolve) => {
+        schedule(() => {
+          if (cycleRef.current === cycleId) {
+            resolve();
+          }
+        }, duration);
+      }),
+    [schedule],
+  );
 
-    // Phase 3: Rise with news (at 1.6s)
-    setTimeout(() => {
-      diveStartRef.current = performance.now();
-      animateRise(performance.now(), x, newsText, bird.id);
-    }, 1600);
+  const triggerDive = useCallback(async () => {
+    if (runningRef.current) {
+      return;
+    }
 
-    // Phase 4: Start fading (at 7.5s)
-    setTimeout(() => {
-      cancelAnimationFrame(rafRef.current);
-      setDive((prev) => prev ? { ...prev, phase: "fading" } : null);
-    }, 7500);
+    runningRef.current = true;
+    clearTimers();
+    window.cancelAnimationFrame(rafRef.current);
 
-    // Phase 5: Clear (at 8.5s)
-    setTimeout(() => {
-      setDive(null);
-    }, 8500);
-  }, [dive, horizonPct, animateRise]);
+    const cycleId = cycleRef.current + 1;
+    cycleRef.current = cycleId;
+
+    const newsText = SB_NEWS[newsIdxRef.current];
+    newsIdxRef.current = (newsIdxRef.current + 1) % SB_NEWS.length;
+
+    const diveTargetX = 45 + Math.random() * 10;
+    const showX = 76 + Math.random() * 4;
+    const showY = horizonPct - 8.6;
+    const returnArcLift = 10 + Math.random() * 4;
+
+    await animateSegment(cycleId, 1180, (progress) => {
+      const eased = easeInCubic(progress);
+      const x = lerp(MESSENGER_PERCH.x, diveTargetX, eased);
+      const y =
+        lerp(MESSENGER_PERCH.y, horizonPct - 1.5, eased) -
+        Math.sin(progress * Math.PI) * 7;
+
+      setMessenger({
+        phase: "diving",
+        x,
+        y,
+        rotation: lerp(-6, 68, eased),
+        cardOpacity: 0,
+        newsText,
+      });
+    });
+
+    setShowSplash(true);
+    await sleep(cycleId, 260);
+    setShowSplash(false);
+
+    await animateSegment(cycleId, 880, (progress) => {
+      const eased = easeOutCubic(progress);
+      const x = lerp(diveTargetX, showX, eased);
+      const y = lerp(horizonPct - 1.5, showY, eased) - Math.sin(progress * Math.PI) * 5;
+
+      setMessenger({
+        phase: "lifting",
+        x,
+        y,
+        rotation: lerp(68, -10, eased),
+        cardOpacity: clamp((progress - 0.68) / 0.32, 0, 1),
+        newsText,
+      });
+    });
+
+    await animateSegment(cycleId, 2300, (progress) => {
+      const drift = Math.sin(progress * Math.PI) * 1.5;
+
+      setMessenger({
+        phase: "showing",
+        x: showX + drift,
+        y: showY + Math.sin(progress * Math.PI * 2) * 1.4,
+        rotation: -8 + Math.sin(progress * Math.PI * 2) * 3,
+        cardOpacity: 1,
+        newsText,
+      });
+    });
+
+    await animateSegment(cycleId, 1250, (progress) => {
+      const eased = easeInOutCubic(progress);
+      const x = lerp(showX, MESSENGER_PERCH.x, eased);
+      const baseY = lerp(showY, MESSENGER_PERCH.y, eased);
+      const y = baseY - Math.sin(progress * Math.PI) * returnArcLift;
+
+      setMessenger({
+        phase: "returning",
+        x,
+        y,
+        rotation: lerp(-8, -2, eased),
+        cardOpacity: lerp(1, 0, eased),
+        newsText,
+      });
+    });
+
+    if (cycleRef.current === cycleId) {
+      setMessenger(null);
+      runningRef.current = false;
+    }
+  }, [animateSegment, clearTimers, horizonPct, sleep]);
 
   useEffect(() => {
-    const first = setTimeout(triggerDive, 4000);
-    const interval = setInterval(triggerDive, 15000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(interval);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [triggerDive]);
+    schedule(triggerDive, 3800);
+    const intervalId = window.setInterval(triggerDive, 14500);
 
-  const isDiving = dive?.phase === "diving";
-  const showSplash = dive?.phase === "splash";
-  const showRiser = dive && (dive.phase === "rising" || dive.phase === "showing" || dive.phase === "fading");
+    return () => {
+      window.clearInterval(intervalId);
+      cycleRef.current += 1;
+      clearTimers();
+      window.cancelAnimationFrame(rafRef.current);
+    };
+  }, [clearTimers, schedule, triggerDive]);
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* ---- Flock birds ---- */}
-      {BIRDS.map((bird) => {
-        const thisBirdDiving = isDiving && dive?.birdId === bird.id;
-        return (
-          <div
-            key={bird.id}
-            className={cn("bird-flight", thisBirdDiving && "bird-diving")}
-            style={{
+      {BIRDS.map((bird) => (
+        <div
+          key={bird.id}
+          className="bird-flight"
+          style={
+            {
               "--bird-y": `${bird.y}%`,
               "--bird-speed": `${bird.speed}s`,
               "--bird-delay": `${bird.delay}s`,
               "--bird-dir": bird.direction === 1 ? "1" : "-1",
               "--bird-bob": `${bird.bobAmp}px`,
-              "--dive-target-x": dive ? `${dive.x}%` : "50%",
-              "--dive-target-y": `${horizonPct}%`,
               position: "absolute",
               top: 0,
               left: 0,
-              opacity: thisBirdDiving ? 0.7 : bird.opacity,
-              transition: "opacity 0.3s",
-            } as React.CSSProperties}
-          >
-            <BirdSvg size={bird.size} className="text-white" />
-          </div>
-        );
-      })}
+              opacity: bird.opacity,
+            } as React.CSSProperties
+          }
+        >
+          <BirdSvg size={bird.size} className="text-white" />
+        </div>
+      ))}
 
-      {/* ---- Splash ---- */}
-      {showSplash && dive && (
+      {!messenger ? (
+        <div
+          data-testid="messenger-perch"
+          className="messenger-perch absolute"
+          style={{
+            left: `${MESSENGER_PERCH.x}%`,
+            top: `${MESSENGER_PERCH.y}%`,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <BirdSvg size={30} className="text-white/76 drop-shadow-[0_0_16px_rgba(255,220,180,0.22)]" flapSpeed={0.42} />
+        </div>
+      ) : null}
+
+      {showSplash ? (
         <div
           className="absolute"
-          style={{ left: `${dive.x}%`, top: `${horizonPct}%`, transform: "translate(-50%, -50%)" }}
+          style={{
+            left: `${messenger?.x ?? 50}%`,
+            top: `${horizonPct}%`,
+            transform: "translate(-50%, -50%)",
+          }}
         >
           <div className="splash-ring splash-ring-1" />
           <div className="splash-ring splash-ring-2" />
@@ -242,39 +339,76 @@ export function SkyBirds({ horizonPct }: SkyBirdsProps) {
           <div className="splash-drop splash-drop-2" />
           <div className="splash-drop splash-drop-3" />
         </div>
-      )}
+      ) : null}
 
-      {/* ---- Rising bird carrying news ---- */}
-      {showRiser && dive && (
-        <div
-          className={cn(
-            "absolute transition-opacity",
-            dive.phase === "fading" ? "duration-1000 opacity-0" : "duration-300 opacity-100",
-          )}
-          style={{
-            left: `${dive.x + (dive.driftX || 0)}%`,
-            top: `${dive.risingY}%`,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          {/* The bird */}
-          <div className="flex justify-center">
-            <BirdSvg size={22} className="text-white/70" />
+      {messenger ? (() => {
+        const cardOnLeft = messenger.x > 68;
+        const connectorStyle = cardOnLeft
+          ? {
+              right: "95%",
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.28), rgba(255,255,255,0.08))",
+            }
+          : {
+              left: "95%",
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.28), rgba(255,255,255,0.04))",
+            };
+
+        return (
+          <div
+            data-testid="messenger-bird"
+            className="absolute"
+            style={{
+              left: `${messenger.x}%`,
+              top: `${messenger.y}%`,
+              transform: `translate(-50%, -50%) rotate(${messenger.rotation}deg)`,
+              filter: "drop-shadow(0 8px 18px rgba(4, 10, 28, 0.4))",
+            }}
+          >
+            <div className="relative flex items-center justify-center">
+              <BirdSvg
+                size={38}
+                className={cn(
+                  "relative z-10 text-white/84 transition-opacity duration-300",
+                  messenger.phase === "diving" && "text-amber-50/76",
+                )}
+                flapSpeed={messenger.phase === "diving" ? 0.22 : 0.34}
+              />
+
+              <div
+                className="absolute top-1/2 h-px w-8 -translate-y-1/2"
+                style={{
+                  ...connectorStyle,
+                  opacity: messenger.cardOpacity * 0.9,
+                }}
+              />
+
+              <div
+                data-testid="messenger-card"
+                className="news-card absolute top-1/2 transition-opacity duration-300"
+                style={{
+                  left: cardOnLeft ? "auto" : "calc(100% + 0.9rem)",
+                  right: cardOnLeft ? "calc(100% + 0.9rem)" : "auto",
+                  opacity: messenger.cardOpacity,
+                  transform: `translateY(calc(-50% + ${(1 - messenger.cardOpacity) * 10}px)) rotate(${cardOnLeft ? -4 : 4}deg)`,
+                }}
+              >
+                <div className="news-card-glow" />
+                <div className="relative z-10 flex items-center gap-2 px-4 pt-2">
+                  <span className="inline-flex rounded-full border border-white/12 bg-white/[0.05] px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-white/55">
+                    Local note
+                  </span>
+                </div>
+                <p className="relative z-10 max-w-[15rem] px-4 pb-3 pt-1 text-[11px] font-medium leading-relaxed tracking-[0.04em] text-white/88 md:max-w-[18rem] md:text-[11.5px]">
+                  {messenger.newsText}
+                </p>
+                <div className="news-card-shine" />
+              </div>
+            </div>
           </div>
-
-          {/* Thin string connecting bird to banner */}
-          <div className="mx-auto h-5 w-px bg-gradient-to-b from-white/25 to-white/5" />
-
-          {/* News card */}
-          <div className="news-card">
-            <div className="news-card-glow" />
-            <p className="relative z-10 whitespace-nowrap px-4 py-2 text-[11px] font-medium tracking-wide text-white/85">
-              {dive.newsText}
-            </p>
-            <div className="news-card-shine" />
-          </div>
-        </div>
-      )}
+        );
+      })() : null}
     </div>
   );
 }

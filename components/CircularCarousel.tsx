@@ -197,6 +197,7 @@ export function CircularCarousel({ sections }: Props) {
         <div className="absolute bottom-7 z-[200] flex flex-col items-center gap-2.5 md:bottom-10">
           <p
             ref={labelRef}
+            data-testid="carousel-label"
             className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/45"
           >
             {sections[0].label}

@@ -2,34 +2,7 @@ import { chromium, devices } from "playwright";
 
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
 
-function parseLiveSimulatorScore() {
-  const simulator = document.querySelector("#simulator");
-
-  if (!simulator) {
-    return null;
-  }
-
-  const labels = Array.from(simulator.querySelectorAll("p"));
-  const liveScoreLabel = labels.find(
-    (node) => node.textContent?.trim().toLowerCase() === "live score",
-  );
-
-  const scoreNode = liveScoreLabel?.parentElement?.querySelector("p:nth-of-type(2)");
-
-  if (!scoreNode?.textContent) {
-    return null;
-  }
-
-  const numeric = Number.parseInt(scoreNode.textContent.trim(), 10);
-  return Number.isNaN(numeric) ? null : numeric;
-}
-
-async function runDesktopFlow() {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await context.newPage();
-
-  const issues = [];
+async function collectPageIssues(page) {
   const consoleErrors = [];
 
   page.on("console", (message) => {
@@ -42,74 +15,85 @@ async function runDesktopFlow() {
     consoleErrors.push(error.message);
   });
 
+  return consoleErrors;
+}
+
+async function verifyMessengerCycle(page, issues) {
+  const perch = page.locator('[data-testid="messenger-perch"]');
+  await perch.waitFor({ state: "visible", timeout: 10_000 });
+
+  const activeBird = page.locator('[data-testid="messenger-bird"]');
+  await activeBird.waitFor({ state: "visible", timeout: 8_000 });
+
+  const diveStart = await activeBird.boundingBox();
+  await page.waitForTimeout(500);
+  const diveMid = await activeBird.boundingBox();
+
+  if (!diveStart || !diveMid || diveMid.y <= diveStart.y + 10) {
+    issues.push("Messenger bird dive arc was not visibly descending.");
+  }
+
+  await page.waitForTimeout(2100);
+  const cardOpacity = await page
+    .locator('[data-testid="messenger-card"]')
+    .evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity));
+
+  if (!(cardOpacity > 0.45)) {
+    issues.push("Messenger news card did not become clearly visible.");
+  }
+
+  await page.waitForTimeout(5000);
+  const perchVisibleAgain = await perch.isVisible();
+  const activeBirdVisible = await activeBird.isVisible().catch(() => false);
+
+  if (!perchVisibleAgain || activeBirdVisible) {
+    issues.push("Messenger bird did not return to its perch after the carry cycle.");
+  }
+}
+
+async function runDesktopFlow() {
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const issues = [];
+  const consoleErrors = await collectPageIssues(page);
+
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.waitForSelector("text=IV Sunsets", { timeout: 15_000 });
 
-  const forecastCardCount = await page.locator("#forecast article").count();
-  if (forecastCardCount < 6) {
-    issues.push(`Expected at least 6 forecast cards, found ${forecastCardCount}.`);
-  }
-
-  const bestBadgeCount = await page.getByText("Best chance").count();
-  if (bestBadgeCount !== 1) {
-    issues.push(`Expected 1 \"Best chance\" card, found ${bestBadgeCount}.`);
-  }
-
-  await page.locator("#simulator").scrollIntoViewIfNeeded();
-  await page.waitForSelector("#sim-highCloud", { timeout: 10_000 });
-
-  const scoreBefore = await page.evaluate(parseLiveSimulatorScore);
-
-  const highCloudSlider = page.locator("#sim-highCloud");
-  await highCloudSlider.focus();
-  for (let index = 0; index < 28; index += 1) {
-    await highCloudSlider.press("ArrowRight");
-  }
-
-  const lowCloudSlider = page.locator("#sim-lowCloud");
-  await lowCloudSlider.focus();
-  for (let index = 0; index < 10; index += 1) {
-    await lowCloudSlider.press("ArrowLeft");
-  }
-
-  await page.waitForTimeout(250);
-  const scoreAfter = await page.evaluate(parseLiveSimulatorScore);
-
-  if (scoreBefore === null || scoreAfter === null) {
-    issues.push("Simulator live score was not readable.");
-  } else if (scoreBefore === scoreAfter) {
-    issues.push("Simulator score did not change after slider updates.");
-  }
-
-  const reasonChipCount = await page
-    .locator("#simulator div")
-    .filter({ hasText: "Live score" })
-    .first()
-    .locator("span")
-    .count();
-
-  if (reasonChipCount < 1) {
-    issues.push("Simulator reason chips did not render.");
-  }
-
-  await page.locator("#how").scrollIntoViewIfNeeded();
-  await page.waitForTimeout(500);
-  const chapterVisible = await page
-    .locator("#how")
-    .getByText("Chapter")
-    .first()
-    .isVisible();
-
-  if (!chapterVisible) {
-    issues.push("Scrollytelling chapter content was not visible.");
+  const scoreVisible = await page.locator("text=The sky might").first().isVisible().catch(() => false);
+  if (!scoreVisible) {
+    issues.push("Hero scene did not render the primary sunset message.");
   }
 
   const noOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth + 4,
   );
-
   if (!noOverflow) {
     issues.push("Desktop horizontal overflow detected.");
+  }
+
+  await verifyMessengerCycle(page, issues);
+
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 0.95, behavior: "instant" }));
+  await page.waitForTimeout(900);
+  const labelOne = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!labelOne?.toLowerCase().includes("should i go")) {
+    issues.push("Carousel did not rotate into the countdown section.");
+  }
+
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 1.9, behavior: "instant" }));
+  await page.waitForTimeout(900);
+  const labelTwo = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!labelTwo?.toLowerCase().includes("6-day forecast")) {
+    issues.push("Carousel did not rotate into the forecast section.");
+  }
+
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 2.85, behavior: "instant" }));
+  await page.waitForTimeout(900);
+  const labelThree = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!labelThree?.toLowerCase().includes("where to watch")) {
+    issues.push("Carousel did not rotate into the sunset spots section.");
   }
 
   await page.screenshot({ path: "./.tmp-desktop.png", fullPage: true });
@@ -122,19 +106,8 @@ async function runMobileFlow() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ ...devices["iPhone 13"] });
   const page = await context.newPage();
-
   const issues = [];
-  const consoleErrors = [];
-
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      consoleErrors.push(message.text());
-    }
-  });
-
-  page.on("pageerror", (error) => {
-    consoleErrors.push(error.message);
-  });
+  const consoleErrors = await collectPageIssues(page);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.waitForSelector("text=IV Sunsets", { timeout: 15_000 });
@@ -142,29 +115,20 @@ async function runMobileFlow() {
   const noOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth + 4,
   );
-
   if (!noOverflow) {
     issues.push("Mobile horizontal overflow detected.");
   }
 
-  const forecastCardCount = await page.locator("#forecast article").count();
-  if (forecastCardCount < 6) {
-    issues.push(`Expected at least 6 forecast cards on mobile, found ${forecastCardCount}.`);
+  const dockVisible = await page.getByText("How was tonight?").isVisible().catch(() => false);
+  if (!dockVisible) {
+    issues.push("Main dock CTA was not visible on mobile.");
   }
 
-  await page.locator("#how").scrollIntoViewIfNeeded();
-  await page.waitForTimeout(500);
-  const mobileExplainerCards = await page.locator("#how article").count();
-
-  if (mobileExplainerCards < 6) {
-    issues.push(`Expected 6 mobile explainer cards, found ${mobileExplainerCards}.`);
-  }
-
-  await page.locator("#simulator").scrollIntoViewIfNeeded();
-  const sliderVisible = await page.locator("#sim-highCloud").isVisible();
-
-  if (!sliderVisible) {
-    issues.push("Simulator slider is not visible on mobile.");
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 1.9, behavior: "instant" }));
+  await page.waitForTimeout(900);
+  const forecastLabel = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!forecastLabel?.toLowerCase().includes("6-day forecast")) {
+    issues.push("Forecast section was not reachable on mobile.");
   }
 
   await page.screenshot({ path: "./.tmp-mobile.png", fullPage: true });
@@ -180,19 +144,8 @@ async function runReducedMotionFlow() {
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
-
   const issues = [];
-  const consoleErrors = [];
-
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      consoleErrors.push(message.text());
-    }
-  });
-
-  page.on("pageerror", (error) => {
-    consoleErrors.push(error.message);
-  });
+  const consoleErrors = await collectPageIssues(page);
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.waitForSelector("text=IV Sunsets", { timeout: 15_000 });
@@ -200,22 +153,16 @@ async function runReducedMotionFlow() {
   const prefersReduce = await page.evaluate(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-
   if (!prefersReduce) {
-    issues.push("Reduced motion media query is not active in test context.");
+    issues.push("Reduced motion media query was not active.");
   }
 
-  const heroHeadingVisible = await page
-    .getByRole("heading", { level: 1 })
-    .first()
-    .isVisible();
-
-  if (!heroHeadingVisible) {
-    issues.push("Hero heading is not visible with reduced motion enabled.");
+  const titleVisible = await page.getByText("The sky").first().isVisible().catch(() => false);
+  if (!titleVisible) {
+    issues.push("Primary hero copy was not visible with reduced motion enabled.");
   }
 
   await browser.close();
-
   return { issues, consoleErrors };
 }
 
@@ -224,12 +171,7 @@ async function run() {
   const mobile = await runMobileFlow();
   const reducedMotion = await runReducedMotionFlow();
 
-  const report = {
-    desktop,
-    mobile,
-    reducedMotion,
-  };
-
+  const report = { desktop, mobile, reducedMotion };
   console.log(JSON.stringify(report, null, 2));
 
   const failures = [

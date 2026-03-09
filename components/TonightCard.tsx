@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Camera,
   Check,
@@ -125,48 +126,137 @@ function heroLine(score: number) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  IV Horizon Silhouette                                              */
+/*  IV bluff scene                                                     */
 /* ------------------------------------------------------------------ */
 
-function HorizonSilhouette() {
+function OceanPlane({ palette }: { palette: SkyPalette }) {
+  const bands = Array.from({ length: 9 }, (_, index) => {
+    const inset = 10 + index * 6;
+    const top = 8 + index * 8;
+    const opacity = 0.22 - index * 0.015;
+    return { inset, top, opacity };
+  });
+
   return (
-    <svg
-      viewBox="0 0 1440 120"
-      preserveAspectRatio="none"
-      className="absolute w-full"
-      style={{ top: "58%", height: "12%" }}
-      fill="#040610"
-    >
-      {/* Coastline */}
-      <path d="
-        M0 120 L0 68
-        Q60 70 120 66
-        Q180 62 220 58
-        L240 56 L250 38 L254 36 L258 54
-        L290 52 L310 50
-        L340 48 L348 28 L351 26 L354 46
-        L400 44 L420 42
-        L450 24 L454 22 L458 42
-        L500 40 L560 38
-        L620 36
-        L660 34 L668 14 L671 12 L674 32
-        L720 30
-        L760 28 L768 8 L772 6 L776 26
-        L830 28
-        L880 30
-        L920 26 L928 10 L932 8 L936 24
-        L1000 26
-        L1060 28
-        L1100 30 L1108 18 L1112 16 L1116 28
-        L1200 32
-        L1260 34
-        L1320 38
-        L1380 42
-        L1440 46
-        L1440 120 Z
-      " />
-      {/* Palm tree shapes are the upward spikes at specific x positions */}
-    </svg>
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[43%] overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          clipPath: "polygon(0 16%, 100% 0, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(180deg, rgba(28,34,68,0.72) 0%, rgba(8,18,44,0.92) 34%, rgba(4,10,26,0.98) 100%)",
+        }}
+      />
+
+      <div
+        className="absolute left-1/2 top-[4%] h-[56%] w-[18%] -translate-x-1/2 rounded-[999px] blur-3xl"
+        style={{
+          background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,194,142,0.18) 32%, transparent 76%)`,
+          opacity: 0.95,
+        }}
+      />
+
+      {bands.map((band, index) => (
+        <div
+          key={index}
+          className="absolute rounded-full blur-[1px]"
+          style={{
+            left: `${band.inset}%`,
+            right: `${band.inset}%`,
+            top: `${band.top}%`,
+            height: `${1.2 + index * 0.25}%`,
+            opacity: band.opacity,
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(158,198,255,0.14) 18%, rgba(255,199,146,0.3) 50%, rgba(158,198,255,0.14) 82%, transparent 100%)",
+          }}
+        />
+      ))}
+
+      <div
+        className="absolute left-1/2 top-[6%] h-[48%] w-[12%] -translate-x-1/2 rounded-[999px] blur-2xl"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,222,176,0.32) 0%, rgba(255,188,142,0.22) 45%, transparent 100%)",
+        }}
+      />
+      <div className="absolute inset-x-0 top-0 h-[22%] bg-gradient-to-b from-white/[0.08] to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-[#020611] via-[#020611]/80 to-transparent" />
+    </div>
+  );
+}
+
+function DistantCoastline() {
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute inset-x-0"
+        style={{
+          top: "56%",
+          height: "6.5%",
+          clipPath:
+            "polygon(0 72%, 8% 70%, 16% 66%, 24% 58%, 35% 54%, 48% 50%, 60% 52%, 72% 56%, 84% 60%, 100% 66%, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(180deg, rgba(20,18,30,0.95) 0%, rgba(6,10,20,0.98) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 blur-xl"
+        style={{
+          top: "53.5%",
+          height: "5%",
+          background:
+            "linear-gradient(180deg, rgba(255,194,146,0.15), rgba(255,194,146,0.04) 45%, transparent 100%)",
+        }}
+      />
+    </>
+  );
+}
+
+function ForegroundCliffs() {
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute bottom-0 left-[-5%] h-[42%] w-[42%]"
+        style={{
+          clipPath:
+            "polygon(0 22%, 18% 18%, 34% 10%, 48% 6%, 66% 0, 82% 8%, 92% 20%, 100% 36%, 94% 54%, 84% 66%, 70% 82%, 56% 100%, 0 100%)",
+          background:
+            "linear-gradient(148deg, rgba(22,24,33,0.98) 0%, rgba(64,52,44,0.94) 46%, rgba(18,21,29,0.98) 100%)",
+          boxShadow: "26px -18px 88px rgba(0,0,0,0.42)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute left-[-3%] h-[7%] w-[39%]"
+        style={{
+          bottom: "35.8%",
+          clipPath:
+            "polygon(0 74%, 12% 70%, 24% 60%, 38% 50%, 52% 34%, 66% 18%, 82% 0, 100% 14%, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(90deg, rgba(39,58,43,0.92) 0%, rgba(55,80,58,0.9) 48%, rgba(74,102,74,0.74) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute left-[6%] h-px w-[19%] rotate-[-8deg] bg-gradient-to-r from-white/18 to-transparent"
+        style={{ bottom: "37.2%" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[18%] right-[-2%] h-[14%] w-[24%]"
+        style={{
+          clipPath:
+            "polygon(0 62%, 18% 44%, 42% 26%, 66% 0, 100% 18%, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(180deg, rgba(17,23,38,0.94) 0%, rgba(7,10,18,0.98) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[33%] left-[12%] h-[10%] w-[18%] rounded-full blur-3xl"
+        style={{ background: "rgba(255,177,126,0.08)" }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[29%] right-[8%] h-[10%] w-[16%] rounded-full blur-3xl"
+        style={{ background: "rgba(255,190,145,0.08)" }}
+      />
+    </>
   );
 }
 
@@ -227,9 +317,12 @@ export function TonightCard({ today }: Props) {
   const [nowMs, setNowMs] = useState(0);
 
   useEffect(() => {
-    setNowMs(Date.now());
+    const kickoff = window.setTimeout(() => setNowMs(Date.now()), 0);
     const id = setInterval(() => setNowMs(Date.now()), 60_000);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(kickoff);
+      clearInterval(id);
+    };
   }, []);
 
   const sunsetMs = Date.parse(today.sunsetISO);
@@ -239,6 +332,9 @@ export function TonightCard({ today }: Props) {
     () => ratings.find((e) => e.date === today.date)?.rating ?? null,
     [ratings, today.date],
   );
+  const todaysRatingIndex = todaysRating
+    ? RATINGS.findIndex((rating) => rating.id === todaysRating)
+    : -1;
 
   const submitRating = (r: SunsetRating) => {
     if (!canRate) return;
@@ -290,10 +386,6 @@ export function TonightCard({ today }: Props) {
   /* ---- Render ---- */
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
-
-      {/* ============================================================ */}
-      {/*  LAYER 0 — Sky gradient background                           */}
-      {/* ============================================================ */}
       <div
         className="absolute inset-0"
         style={{
@@ -301,13 +393,22 @@ export function TonightCard({ today }: Props) {
         }}
       />
 
-      {/* User photo replaces sky when present */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 72%, rgba(255,196,146,0.16) 0%, rgba(255,196,146,0.02) 28%, transparent 58%), radial-gradient(circle at 14% 18%, rgba(112,132,255,0.18) 0%, transparent 34%)",
+        }}
+      />
+
       {photoUrl && (
-        <div className="absolute inset-0" style={{ top: 0, bottom: "40%" }}>
-          <img
+        <div className="absolute inset-x-0 top-0 bottom-[37%]">
+          <Image
             src={photoUrl}
-            alt=""
-            className="h-full w-full object-cover"
+            alt="Uploaded sunset reference"
+            fill
+            unoptimized
+            className="object-cover"
             style={{ maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)" }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50" />
@@ -321,9 +422,6 @@ export function TonightCard({ today }: Props) {
         </div>
       )}
 
-      {/* ============================================================ */}
-      {/*  LAYER 1 — Cloud shapes                                       */}
-      {/* ============================================================ */}
       {!photoUrl && clouds.map((c, i) => (
         <div
           key={i}
@@ -339,15 +437,12 @@ export function TonightCard({ today }: Props) {
         />
       ))}
 
-      {/* ============================================================ */}
-      {/*  LAYER 2 — Sun orb at horizon                                 */}
-      {/* ============================================================ */}
       {!photoUrl && (
         <div
           className="pointer-events-none absolute"
           style={{
             left: "52%",
-            top: "56%",
+            top: "54.8%",
             width: `${palette.sunSize}vw`,
             height: `${palette.sunSize}vw`,
             transform: "translate(-50%, -50%)",
@@ -364,7 +459,7 @@ export function TonightCard({ today }: Props) {
           className="pointer-events-none absolute rounded-full"
           style={{
             left: "52%",
-            top: "56%",
+            top: "54.8%",
             width: `${palette.sunSize * 0.2}vw`,
             height: `${palette.sunSize * 0.2}vw`,
             transform: "translate(-50%, -50%)",
@@ -375,159 +470,153 @@ export function TonightCard({ today }: Props) {
         />
       )}
 
-      {/* ============================================================ */}
-      {/*  LAYER 3 — Birds                                              */}
-      {/* ============================================================ */}
-      <SkyBirds horizonPct={58} />
+      <OceanPlane palette={palette} />
+      <DistantCoastline />
+      <ForegroundCliffs />
+      <SkyBirds horizonPct={56.5} />
 
-      {/* ============================================================ */}
-      {/*  LAYER 4 — IV Horizon Silhouette                              */}
-      {/* ============================================================ */}
-      <HorizonSilhouette />
+      <div className="relative z-10 flex h-full flex-1 flex-col px-6 py-8 md:px-10">
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center pt-[8vh] text-center">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-white/42">
+            Isla Vista cliffline outlook
+          </p>
 
-      {/* Subtle gradient below horizon — blends sky into dark content area */}
-      <div
-        className="pointer-events-none absolute inset-x-0"
-        style={{ top: "56%", height: "44%", background: "linear-gradient(to bottom, transparent 0%, rgba(4,6,16,0.4) 20%, rgba(4,6,16,0.85) 50%, #040610 75%)" }}
-      />
-
-      {/* ============================================================ */}
-      {/*  CONTENT — Score floating in the sky                          */}
-      {/* ============================================================ */}
-      <div className="relative z-10 flex flex-1 flex-col">
-
-        {/* ---- Sky area: Score + Title ---- */}
-        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-[44%] md:pb-[38%]">
-          {/* Score */}
-          <div className="flex flex-col items-center">
+          <div className="mt-2 flex flex-col items-center">
             <span
               className="block text-[clamp(7rem,18vw,12rem)] font-semibold leading-none"
               style={{
                 background: `linear-gradient(180deg, #fff 0%, ${palette.sunColor} 100%)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
-                filter: `drop-shadow(0 0 40px ${palette.sunGlow})`,
+                filter: `drop-shadow(0 0 48px ${palette.sunGlow})`,
               }}
             >
               {today.score}
             </span>
-            <span className="mt-2 inline-flex rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1 text-xs uppercase tracking-[0.14em] text-white/80">
+            <span className="mt-2 inline-flex rounded-full border border-white/18 bg-white/[0.08] px-3.5 py-1 text-xs uppercase tracking-[0.16em] text-white/82 backdrop-blur-sm">
               {today.label}
             </span>
           </div>
 
-          {/* Hero line */}
-          <h2 className="mt-5 max-w-md text-center text-xl leading-snug tracking-tight text-white/90 md:text-2xl">
+          <h2 className="mt-5 max-w-xl text-balance text-center text-2xl leading-[1.08] tracking-tight text-white/94 md:text-[2rem]">
             {heroLine(today.score)}
           </h2>
 
-          {/* Sunset time */}
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-white/50">
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-white/54">
             <Sunset className="h-3.5 w-3.5" />
             Sunset at {today.sunsetTime}
           </p>
         </div>
 
-        {/* ---- Ground area: Rate + Photo ---- */}
-        <div className="relative z-10 px-6 pb-10 pt-2 md:px-10">
-          <div className="mx-auto w-full max-w-2xl space-y-5">
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-[18%] h-[22%]"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 70%, rgba(255,189,138,0.14) 0%, rgba(255,189,138,0.06) 26%, transparent 68%)",
+          }}
+        />
 
-            {/* Section heading + share */}
-            <div className="flex items-end justify-between">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-white/30">
-                {canRate ? "How was tonight?" : `Rate after sunset (${today.sunsetTime})`}
-              </p>
+        <div className="absolute inset-x-5 bottom-[4.5rem] z-20 mx-auto flex max-w-6xl flex-col gap-3 md:bottom-20 md:flex-row md:items-end md:justify-between md:gap-5">
+          <div className="w-full max-w-sm rounded-[1.65rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,21,38,0.36),rgba(12,18,34,0.18))] px-5 py-4 shadow-[0_20px_70px_rgba(3,6,18,0.28)] backdrop-blur-xl">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
+              Scene guide
+            </p>
+            <h3 className="mt-2 text-lg font-medium text-white/90">
+              Follow the messenger gull.
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-white/66">
+              It drops to the channel, skims a local note off the water, then climbs back
+              over the bluff. The loop repeats automatically.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-white/54">
+              <span className="h-2 w-2 rounded-full bg-amber-200 shadow-[0_0_12px_rgba(255,204,146,0.65)]" />
+              Live shoreline loop
+            </div>
+          </div>
+
+          <div className="w-full max-w-[32rem] rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(10,14,30,0.44),rgba(10,14,30,0.2))] px-4 py-4 shadow-[0_24px_80px_rgba(3,7,18,0.34)] backdrop-blur-xl md:px-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/38">
+                  {canRate ? "How was tonight?" : `Rating unlocks at ${today.sunsetTime}`}
+                </p>
+                <p className="mt-1 text-sm text-white/64">
+                  {canRate
+                    ? "Tap the read that matched the sky from the bluff."
+                    : "Save your take once the sun is down."}
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={handleShare}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-white/40 transition hover:bg-white/[0.08] hover:text-white/70"
-                aria-label="Share"
+                className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-3 py-2 text-[11px] text-white/58 transition hover:bg-white/[0.1] hover:text-white/82"
               >
-                {shared ? <Check className="h-3 w-3 text-emerald-300" /> : <Share2 className="h-3 w-3" />}
+                {shared ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-300" />
+                ) : (
+                  <Share2 className="h-3.5 w-3.5" />
+                )}
+                {shared ? "Copied" : "Share score"}
               </button>
             </div>
 
-            {/* Rating track — single horizontal line with 4 selectable points */}
-            <div className="relative">
-              {/* Track line */}
-              <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-white/10" />
-              {/* Filled portion up to selection */}
-              {todaysRating && (
-                <div
-                  className="absolute left-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-white/5 via-white/30 to-white/40 transition-all duration-500"
-                  style={{
-                    width: `${(RATINGS.findIndex((r) => r.id === todaysRating) / (RATINGS.length - 1)) * 100}%`,
-                  }}
-                />
-              )}
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {RATINGS.map((opt, index) => {
+                const active = todaysRating === opt.id;
+                const past = todaysRatingIndex >= index && todaysRatingIndex !== -1;
 
-              <div className="relative flex justify-between">
-                {RATINGS.map((opt, i) => {
-                  const active = todaysRating === opt.id;
-                  const past = todaysRating ? RATINGS.findIndex((r) => r.id === todaysRating) >= i : false;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => submitRating(opt.id)}
-                      disabled={!canRate}
-                      className={cn(
-                        "group flex flex-col items-center gap-2",
-                        !canRate && "cursor-not-allowed opacity-50",
-                      )}
-                    >
-                      {/* Dot */}
-                      <div
-                        className={cn(
-                          "relative flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-300",
-                          active
-                            ? "border-white/40 bg-white/20 shadow-[0_0_20px_rgba(255,200,100,0.25)]"
-                            : past
-                              ? "border-white/20 bg-white/10"
-                              : "border-white/8 bg-white/[0.03] group-hover:border-white/20 group-hover:bg-white/[0.08]",
-                        )}
-                      >
-                        {active && (
-                          <div className="h-2.5 w-2.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
-                        )}
-                      </div>
-                      {/* Label */}
-                      <span className={cn(
-                        "text-[11px] font-medium transition-colors duration-300",
-                        active ? "text-white/80" : "text-white/30 group-hover:text-white/55",
-                      )}>
-                        {opt.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => submitRating(opt.id)}
+                    disabled={!canRate}
+                    className={cn(
+                      "rounded-[1.15rem] border px-3 py-3 text-left transition duration-300",
+                      active
+                        ? "border-white/28 bg-[linear-gradient(180deg,rgba(255,216,179,0.18),rgba(255,255,255,0.08))] shadow-[0_0_32px_rgba(255,188,128,0.16)]"
+                        : past
+                          ? "border-white/14 bg-white/[0.07]"
+                          : "border-white/8 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.06]",
+                      !canRate && "cursor-not-allowed opacity-55",
+                    )}
+                  >
+                    <span className="text-sm font-medium text-white/84">{opt.label}</span>
+                    <span className="mt-1 block text-[11px] leading-relaxed text-white/45">
+                      {opt.vibe}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Photo capture */}
-            {!photoUrl && (
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => camRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] text-white/40 transition hover:bg-white/[0.07] hover:text-white/65"
-                >
-                  <Camera className="h-3 w-3" />
-                  Take Photo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] text-white/40 transition hover:bg-white/[0.07] hover:text-white/65"
-                >
-                  <ImagePlus className="h-3 w-3" />
-                  Upload
-                </button>
-                <p className="ml-auto text-[10px] text-white/20">
-                  Your photo becomes the sky
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {!photoUrl ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => camRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 py-2 text-[11px] text-white/56 transition hover:bg-white/[0.1] hover:text-white/78"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    Take photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 py-2 text-[11px] text-white/56 transition hover:bg-white/[0.1] hover:text-white/78"
+                  >
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    Upload photo
+                  </button>
+                </>
+              ) : (
+                <p className="text-[11px] uppercase tracking-[0.16em] text-white/38">
+                  Your photo is now steering the sky scene.
                 </p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
