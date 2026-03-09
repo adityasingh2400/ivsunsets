@@ -369,6 +369,19 @@ html.lenis body {
   will-change: transform;
 }
 
+.shoreline-wave-drift {
+  animation: shoreline-wave-drift 16s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+.shoreline-water-sheen {
+  animation: shoreline-water-sheen 10s ease-in-out infinite;
+}
+
+.shoreline-striation {
+  animation: shoreline-striation 14s ease-in-out infinite alternate;
+}
+
 @keyframes bird-fly {
   0% {
     transform: translate(
@@ -392,6 +405,21 @@ html.lenis body {
 @keyframes messenger-hover {
   0%, 100% { transform: translate(-50%, -50%) translateY(0); }
   50% { transform: translate(-50%, -50%) translateY(5px); }
+}
+
+@keyframes shoreline-wave-drift {
+  0% { transform: translateX(-10px); }
+  100% { transform: translateX(12px); }
+}
+
+@keyframes shoreline-water-sheen {
+  0%, 100% { opacity: 0.38; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shoreline-striation {
+  0% { transform: translateX(0); opacity: 0.72; }
+  100% { transform: translateX(6px); opacity: 0.42; }
 }
 
 /* Dive override — bird swoops toward the water */
