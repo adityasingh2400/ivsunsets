@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IV Sunsets
 
-## Getting Started
+Predicts how vibrant tonight's Isla Vista sunset will be — scored 0–100 with a full visual breakdown of why.
 
-First, run the development server:
+Built with Next.js, Canvas animations, and real-time weather data.
+
+![Score labels: Poor → Decent → Good → Great → Unreal](https://img.shields.io/badge/score_range-0_to_100-orange)
+
+## What it does
+
+- **Real-time sunset scoring** for Isla Vista, CA using live weather forecasts
+- **6-day outlook** with per-day scores, explanations, and reason chips
+- **Animated sky visualizations** on HTML5 Canvas that respond to forecast data
+- **Interactive simulator** — drag sliders and watch the sky and score react live
+- **Scrollytelling explainer** teaching the science behind great sunsets
+- **Post-sunset feedback** stored locally to calibrate future predictions
+
+## Quick start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+No API keys needed — all data sources are free and public.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data sources
 
-## Learn More
+All weather data comes from the [Open-Meteo API](https://open-meteo.com/) (free, no key required).
 
-To learn more about Next.js, take a look at the following resources:
+| Parameter | What it tells us |
+|-----------|-----------------|
+| `cloud_cover_high` | Cirrus wisps that catch warm light |
+| `cloud_cover_mid` | Altocumulus texture and depth |
+| `cloud_cover_low` | Marine layer / fog that blocks the horizon |
+| `cloud_cover` | Overall cloud coverage |
+| `precipitation` | Rain intensity + prior-rain clearing signal |
+| `relative_humidity_2m` | Moisture for atmospheric scattering |
+| `visibility` | Horizon clarity (haze detection) |
+| `sunrise` / `sunset` | Defines the scoring window |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Location:** Isla Vista, CA (34.4133°N, 119.861°W)
+**Scoring window:** 2 hours before sunset → 30 minutes after
+**Rain lookback:** 6–24 hours before sunset
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+If the API is unreachable, the app serves fallback forecasts so it never breaks.
 
-## Deploy on Vercel
+## How scoring works
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Implemented in `lib/scoreSunset.ts`. Each day gets a 0–100 score:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Factor | Max impact | What it rewards |
+|--------|-----------|-----------------|
+| High cloud support | +32 pts | Cirrus in the 26–62% sweet spot |
+| Mid cloud support | +24 pts | Altocumulus texture, 20–58% |
+| Cloud texture | +14 pts | Overall coverage 30–72%, penalized if overcast |
+| Low cloud penalty | −34 pts | Marine layer blocking the horizon |
+| Rain bonus | +8 pts | Post-rain clearing with open sky |
+| Texture contrast | +6 pts | High/mid clouds vs. low cloud differential |
+| Humidity bonus | +4 pts | Moderate moisture (40–75%) enhancing scattering |
+| Visibility modifier | −5 to +3 pts | Haze penalty or clear-horizon boost |
+| Baseline | 20 pts | Starting score for any sunset |
+
+**Labels:** Poor (0–24) · Decent (25–44) · Good (45–64) · Great (65–84) · Unreal (85–100)
+
+## Project structure
+
+```
+app/
+  page.tsx                  → Main page, data loading
+  api/forecast/route.ts     → Open-Meteo fetch, normalization, fallback
+  how-it-works/             → Explainer page
+components/
+  HeroSky.tsx               → Full-screen animated hero
+  SkyCanvas.tsx             → Reusable Canvas sky renderer
+  ForecastCard.tsx          → Day card with mini sky preview
+  ScoreBreakdown.tsx        → Factor-by-factor breakdown
+  SunsetSimulator.tsx       → Interactive build-your-own-sunset
+  ScrollyExplainer.tsx      → Scroll-driven educational chapters
+  SpotlightFeature.tsx      → Post-sunset rating UI
+lib/
+  scoreSunset.ts            → Scoring algorithm
+  normalizeForecast.ts      → Sunset window extraction + data shaping
+  types.ts                  → Shared TypeScript interfaces
+  skyRenderer.ts            → Canvas drawing primitives
+  utils.ts                  → General helpers
+scripts/
+  smoke-test.mjs            → Playwright e2e smoke tests
+```
+
+## Commands
+
+```bash
+npm run dev         # Development server
+npm run build       # Production build
+npm run lint        # ESLint
+npm run typecheck   # TypeScript check
+npm run smoke       # Playwright smoke tests
+```
+
+## Stack
+
+- **Next.js 16** (App Router + Turbopack)
+- **React 19** + TypeScript
+- **Tailwind CSS 4**
+- **Framer Motion** for scroll/viewport animations
+- **Lenis** for smooth scrolling
+- **HTML5 Canvas** for all sky visualizations
+- **Open-Meteo** for weather data (no API key)

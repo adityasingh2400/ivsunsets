@@ -1,65 +1,145 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CircularCarousel,
+  type CarouselSection,
+} from "@/components/CircularCarousel";
+import { ForecastGrid } from "@/components/ForecastGrid";
+import { SunsetCountdown } from "@/components/SunsetCountdown";
+import { SunsetSpots } from "@/components/SunsetSpots";
+import { TonightCard } from "@/components/TonightCard";
+import { fetchForecast } from "@/lib/fetchForecast";
+import type { ForecastPayload } from "@/lib/types";
+
+/* ------------------------------------------------------------------ */
+/*  Loading / error states                                             */
+/* ------------------------------------------------------------------ */
+
+function LoadingSkeleton() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="flex min-h-screen items-center justify-center bg-[#040610] text-white">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/15 border-t-white/60" />
+    </main>
+  );
+}
+
+function ErrorScreen({
+  error,
+  onRetry,
+}: {
+  error: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#040610] px-6 text-white">
+      <div className="max-w-lg rounded-3xl border border-rose-300/25 bg-rose-200/10 p-6 text-center">
+        <p className="mb-3 inline-flex items-center gap-2 text-rose-100">
+          <AlertCircle className="h-4 w-4" />
+          Forecast unavailable
+        </p>
+        <p className="mb-4 text-sm text-white/70">
+          We could not load the sunset forecast right now.
+          {error ? ` (${error})` : ""}
+        </p>
+        <button
+          type="button"
+          className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:bg-white/10"
+          onClick={onRetry}
+        >
+          Try again
+        </button>
+      </div>
+    </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Home page                                                          */
+/* ------------------------------------------------------------------ */
+
+export default function HomePage() {
+  const [payload, setPayload] = useState<ForecastPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadForecast = useCallback(async (signal?: AbortSignal) => {
+    setIsLoading(true);
+    try {
+      const next = await fetchForecast(signal);
+      setPayload(next);
+      setError(null);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Unable to load forecast right now.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    loadForecast(ac.signal);
+    return () => ac.abort();
+  }, [loadForecast]);
+
+  const bestDayDate = useMemo(() => {
+    if (!payload?.days?.length) return null;
+    return payload.days.reduce((b, d) => (d.score > b.score ? d : b)).date;
+  }, [payload]);
+
+  /* ---------- Guards ---------- */
+  if (isLoading && !payload) return <LoadingSkeleton />;
+  if (!payload?.today)
+    return <ErrorScreen error={error} onRetry={() => loadForecast()} />;
+
+  /* ---------- Carousel sections ---------- */
+  const sections: CarouselSection[] = [
+    {
+      id: "tonight",
+      label: "Tonight's sunset",
+      glowColor: "rgba(255,160,100,0.07)",
+      content: <TonightCard today={payload.today} />,
+    },
+    {
+      id: "countdown",
+      label: "Should I go?",
+      glowColor: "rgba(255,190,130,0.06)",
+      content: <SunsetCountdown today={payload.today} bare />,
+    },
+    {
+      id: "forecast",
+      label: "6-day forecast",
+      glowColor: "rgba(140,180,255,0.06)",
+      content: (
+        <ForecastGrid days={payload.days} bestDate={bestDayDate} />
+      ),
+    },
+    {
+      id: "spots",
+      label: "Where to watch",
+      glowColor: "rgba(100,160,255,0.06)",
+      content: <SunsetSpots bare />,
+    },
+  ];
+
+  return (
+    <main className="overflow-x-clip bg-[#040610] text-white">
+      <CircularCarousel sections={sections} />
+
+      <footer className="border-t border-white/10 px-6 py-8 text-xs text-white/55 md:px-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <p>
+            IV Sunsets | Source:{" "}
+            {payload.source === "open-meteo" ? "Open-Meteo" : "Fallback model"}
+          </p>
+          <p>
+            Updated {new Date(payload.generatedAt).toLocaleString("en-US")}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </footer>
+    </main>
   );
 }

@@ -1,26 +1,541 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-body: var(--font-manrope);
+  --font-display: var(--font-fraunces);
+  --background: #040610;
+  --foreground: #f8f2e7;
 }
 
 @theme inline {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(
+      circle at 50% -20%,
+      rgba(99, 119, 199, 0.22) 0%,
+      rgba(4, 6, 16, 0) 58%
+    ),
+    #040610;
+  color: var(--foreground);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display), serif;
+  letter-spacing: -0.02em;
+}
+
+.sunset-noise {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.6px, transparent 0.6px);
+  background-size: 3px 3px;
+  mix-blend-mode: soft-light;
+  opacity: 0.13;
+}
+
+.iv-slider {
+  --slider-progress: 50%;
+  width: 100%;
+  appearance: none;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: transparent;
+  outline: none;
+}
+
+.iv-slider::-webkit-slider-runnable-track {
+  height: 0.55rem;
+  border-radius: 999px;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(249, 236, 212, 0.92) 0%,
+      rgba(255, 158, 152, 0.82) 50%,
+      rgba(141, 177, 255, 0.9) 100%
+    ),
+    linear-gradient(to right, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.12));
+  background-size:
+    var(--slider-progress) 100%,
+    100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.iv-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(9, 13, 30, 0.85);
+  background: #fff6eb;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  margin-top: -3px;
+}
+
+.iv-slider::-moz-range-track {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.iv-slider::-moz-range-progress {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    rgba(249, 236, 212, 0.92),
+    rgba(255, 158, 152, 0.82),
+    rgba(141, 177, 255, 0.9)
+  );
+}
+
+.iv-slider::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(9, 13, 30, 0.85);
+  background: #fff6eb;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.iv-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 220, 180, 0.22);
+}
+
+.iv-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 220, 180, 0.22);
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Carousel cards                                                    */
+/* ------------------------------------------------------------------ */
+
+.carousel-card {
+  display: flex;
+  flex-direction: column;
+  width: min(96vw, 920px);
+  max-height: 76vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080e1e;
+  box-shadow: 0 24px 80px rgba(2, 4, 14, 0.6);
+  transition:
+    width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.carousel-card::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focused = full-screen immersive takeover, zero chrome */
+.carousel-card.focused {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border-color: transparent;
+  background: #040610;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+/* GPU containment hint for carousel items */
+.contain-layout-paint {
+  contain: layout paint;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Leaflet – fix Tailwind preflight breaking tiles                   */
+/* ------------------------------------------------------------------ */
+
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-container {
+  background: #040610;
+  font-family: inherit;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sunset map markers                                                */
+/* ------------------------------------------------------------------ */
+
+.sunset-spot-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.spot-marker-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Animated expanding ring */
+.spot-pulse {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  animation: spot-pulse 3.5s ease-in-out infinite;
+}
+
+/* Soft glow halo */
+.spot-glow {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.12;
+  filter: blur(8px);
+  transition: width 0.3s, height 0.3s, opacity 0.3s;
+}
+
+/* Main coloured dot */
+.spot-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: width 0.3s, height 0.3s, box-shadow 0.3s;
+}
+
+/* Bright white centre */
+.spot-core {
+  position: absolute;
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: white;
+  opacity: 0.85;
+}
+
+/* Hover / active state */
+.spot-marker-wrap.active .spot-glow,
+.spot-marker-wrap.selected .spot-glow {
+  width: 32px;
+  height: 32px;
+  opacity: 0.28;
+}
+
+.spot-marker-wrap.active .spot-dot,
+.spot-marker-wrap.selected .spot-dot {
+  width: 12px;
+  height: 12px;
+}
+
+/* Selected – extra ring */
+.spot-marker-wrap.selected .spot-dot {
+  box-shadow: 0 0 14px var(--accent);
+}
+
+.spot-marker-wrap.selected::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--accent);
+  opacity: 0.45;
+  animation: spot-ring-spin 10s linear infinite;
+}
+
+@keyframes spot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes spot-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Leaflet UI dark theme overrides                                   */
+/* ------------------------------------------------------------------ */
+
+.sunset-tooltip {
+  background: rgba(4, 6, 16, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 5px 12px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+.sunset-tooltip.leaflet-tooltip-top::before {
+  border-top-color: rgba(4, 6, 16, 0.92) !important;
+}
+
+.sunset-tooltip.leaflet-tooltip-bottom::before {
+  border-bottom-color: rgba(4, 6, 16, 0.92) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(4, 6, 16, 0.65) !important;
+  color: rgba(255, 255, 255, 0.22) !important;
+  font-size: 9px !important;
+  border-radius: 4px 0 0 0 !important;
+  padding: 2px 6px !important;
+}
+
+.leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.32) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sky birds                                                         */
+/* ------------------------------------------------------------------ */
+
+.bird-flight {
+  animation:
+    bird-fly var(--bird-speed) linear var(--bird-delay) infinite,
+    bird-bob 3s ease-in-out var(--bird-delay) infinite;
+  will-change: transform;
+}
+
+@keyframes bird-fly {
+  0% {
+    transform: translate(
+      calc(-40px * var(--bird-dir)),
+      var(--bird-y)
+    );
+  }
+  100% {
+    transform: translate(
+      calc((100vw + 40px) * var(--bird-dir)),
+      var(--bird-y)
+    );
+  }
+}
+
+@keyframes bird-bob {
+  0%, 100% { margin-top: 0; }
+  50% { margin-top: var(--bird-bob); }
+}
+
+/* Dive override — bird swoops toward the water */
+.bird-diving {
+  animation: bird-dive 1s cubic-bezier(0.4, 0, 0.8, 1) forwards !important;
+}
+
+@keyframes bird-dive {
+  0% {
+    transform: translate(var(--dive-target-x), var(--bird-y)) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(var(--dive-target-x), var(--dive-target-y)) rotate(40deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(var(--dive-target-x), var(--dive-target-y)) rotate(70deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bird wing flapping                                                */
+/* ------------------------------------------------------------------ */
+
+.bird-wing-l {
+  animation: flap-left var(--flap-speed, 0.35s) ease-in-out infinite;
+}
+
+.bird-wing-r {
+  animation: flap-right var(--flap-speed, 0.35s) ease-in-out infinite;
+}
+
+@keyframes flap-left {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(25deg); }
+}
+
+@keyframes flap-right {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-25deg); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Splash rings                                                      */
+/* ------------------------------------------------------------------ */
+
+.splash-ring {
+  position: absolute;
+  width: 8px;
+  height: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+.splash-ring-1 { animation: splash-expand 0.8s ease-out forwards; }
+.splash-ring-2 { animation: splash-expand 0.8s ease-out 0.1s forwards; }
+.splash-ring-3 { animation: splash-expand 0.8s ease-out 0.2s forwards; }
+
+@keyframes splash-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(6);
+    opacity: 0;
+  }
+}
+
+/* Water droplets */
+.splash-drop {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  top: 50%;
+  left: 50%;
+}
+
+.splash-drop-1 { animation: splash-droplet 0.6s ease-out forwards; --drop-x: -12px; --drop-y: -18px; }
+.splash-drop-2 { animation: splash-droplet 0.6s ease-out 0.05s forwards; --drop-x: 8px; --drop-y: -22px; }
+.splash-drop-3 { animation: splash-droplet 0.6s ease-out 0.1s forwards; --drop-x: 14px; --drop-y: -14px; }
+
+@keyframes splash-droplet {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--drop-x)), calc(-50% + var(--drop-y))) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  News card (carried by bird)                                       */
+/* ------------------------------------------------------------------ */
+
+.news-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(10, 14, 30, 0.85) 0%, rgba(20, 18, 40, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Soft ambient glow behind the card */
+.news-card-glow {
+  position: absolute;
+  inset: -8px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(255, 180, 100, 0.08) 0%,
+    transparent 70%
+  );
+  border-radius: 20px;
+  z-index: -1;
+}
+
+/* Subtle diagonal shine sweep */
+.news-card-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.04) 45%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.04) 55%,
+    transparent 60%
+  );
+  animation: news-shine 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes news-shine {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                    */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
