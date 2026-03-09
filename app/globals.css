@@ -184,6 +184,13 @@ html.lenis body {
   overflow: hidden;
 }
 
+@media (max-width: 767px) {
+  .carousel-card.focused {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* GPU containment hint for carousel items */
 .contain-layout-paint {
   contain: layout paint;
@@ -353,7 +360,7 @@ html.lenis body {
 .bird-flight {
   animation:
     bird-fly var(--bird-speed) linear var(--bird-delay) infinite,
-    bird-bob 3s ease-in-out var(--bird-delay) infinite;
+    bird-bob 5.6s ease-in-out var(--bird-delay) infinite;
   will-change: transform;
 }
 
@@ -421,12 +428,12 @@ html.lenis body {
 
 @keyframes flap-left {
   0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(25deg); }
+  50% { transform: rotate(10deg); }
 }
 
 @keyframes flap-right {
   0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-25deg); }
+  50% { transform: rotate(-10deg); }
 }
 
 /* ------------------------------------------------------------------ */

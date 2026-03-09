@@ -24,7 +24,7 @@ const SB_NEWS = [
 function BirdSvg({
   size = 16,
   className,
-  flapSpeed = 0.35,
+  flapSpeed = 0.8,
 }: {
   size?: number;
   className?: string;
@@ -43,7 +43,7 @@ function BirdSvg({
     >
       <path
         className="bird-wing-l"
-        d="M12 8 Q9 5 6 2 Q4 0.5 1 2.5"
+        d="M12 8.1 Q9.2 6.9 6.1 5.5 Q3.7 4.6 1.2 4.9"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
@@ -52,7 +52,7 @@ function BirdSvg({
       />
       <path
         className="bird-wing-r"
-        d="M12 8 Q15 5 18 2 Q20 0.5 23 2.5"
+        d="M12 8.1 Q14.8 6.9 17.9 5.5 Q20.3 4.6 22.8 4.9"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
@@ -76,14 +76,14 @@ interface BirdConfig {
 }
 
 const BIRDS: BirdConfig[] = [
-  { id: 0, size: 18, y: 30, speed: 20, delay: 0, direction: 1, bobAmp: 10, opacity: 0.38 },
-  { id: 1, size: 22, y: 37, speed: 16, delay: -4, direction: -1, bobAmp: 14, opacity: 0.5 },
-  { id: 2, size: 15, y: 26, speed: 24, delay: -9, direction: 1, bobAmp: 8, opacity: 0.26 },
-  { id: 3, size: 24, y: 41, speed: 14, delay: -2, direction: 1, bobAmp: 16, opacity: 0.52 },
-  { id: 4, size: 17, y: 34, speed: 22, delay: -7, direction: -1, bobAmp: 11, opacity: 0.34 },
-  { id: 5, size: 13, y: 24, speed: 28, delay: -15, direction: 1, bobAmp: 7, opacity: 0.22 },
-  { id: 6, size: 20, y: 45, speed: 18, delay: -5, direction: -1, bobAmp: 13, opacity: 0.44 },
-  { id: 7, size: 14, y: 29, speed: 26, delay: -12, direction: 1, bobAmp: 9, opacity: 0.24 },
+  { id: 0, size: 18, y: 30, speed: 34, delay: 0, direction: 1, bobAmp: 5, opacity: 0.34 },
+  { id: 1, size: 22, y: 37, speed: 30, delay: -5, direction: -1, bobAmp: 7, opacity: 0.46 },
+  { id: 2, size: 15, y: 26, speed: 38, delay: -10, direction: 1, bobAmp: 4, opacity: 0.24 },
+  { id: 3, size: 24, y: 41, speed: 28, delay: -3, direction: 1, bobAmp: 8, opacity: 0.48 },
+  { id: 4, size: 17, y: 34, speed: 36, delay: -9, direction: -1, bobAmp: 5, opacity: 0.3 },
+  { id: 5, size: 13, y: 24, speed: 42, delay: -16, direction: 1, bobAmp: 4, opacity: 0.2 },
+  { id: 6, size: 20, y: 45, speed: 32, delay: -6, direction: -1, bobAmp: 7, opacity: 0.4 },
+  { id: 7, size: 14, y: 29, speed: 40, delay: -13, direction: 1, bobAmp: 4, opacity: 0.22 },
 ];
 
 const MESSENGER_PERCH = { x: 80, y: 17.5 };
@@ -319,7 +319,7 @@ export function SkyBirds({ horizonPct }: SkyBirdsProps) {
             transform: "translate(-50%, -50%)",
           }}
         >
-          <BirdSvg size={30} className="text-white/76 drop-shadow-[0_0_16px_rgba(255,220,180,0.22)]" flapSpeed={0.42} />
+          <BirdSvg size={30} className="text-white/76 drop-shadow-[0_0_16px_rgba(255,220,180,0.22)]" flapSpeed={0.92} />
         </div>
       ) : null}
 
@@ -367,14 +367,14 @@ export function SkyBirds({ horizonPct }: SkyBirdsProps) {
             }}
           >
             <div className="relative flex items-center justify-center">
-              <BirdSvg
-                size={38}
-                className={cn(
-                  "relative z-10 text-white/84 transition-opacity duration-300",
-                  messenger.phase === "diving" && "text-amber-50/76",
-                )}
-                flapSpeed={messenger.phase === "diving" ? 0.22 : 0.34}
-              />
+                <BirdSvg
+                  size={38}
+                  className={cn(
+                    "relative z-10 text-white/84 transition-opacity duration-300",
+                    messenger.phase === "diving" && "text-amber-50/76",
+                  )}
+                  flapSpeed={messenger.phase === "diving" ? 0.44 : 0.82}
+                />
 
               <div
                 className="absolute top-1/2 h-px w-8 -translate-y-1/2"

@@ -130,11 +130,30 @@ function heroLine(score: number) {
 /* ------------------------------------------------------------------ */
 
 function OceanPlane({ palette }: { palette: SkyPalette }) {
-  const bands = Array.from({ length: 9 }, (_, index) => {
-    const inset = 10 + index * 6;
-    const top = 8 + index * 8;
-    const opacity = 0.22 - index * 0.015;
-    return { inset, top, opacity };
+  const waveBands = Array.from({ length: 22 }, (_, index) => {
+    const progress = index / 21;
+    return {
+      top: 8 + Math.pow(progress, 1.28) * 69,
+      width: 58 + Math.pow(progress, 0.92) * 42,
+      height: 0.24 + progress * 1.15,
+      opacity: 0.018 + progress * 0.05,
+      blur: progress > 0.8 ? 0.2 : 0.7,
+      rotate: (index % 2 === 0 ? -0.18 : 0.18) * (1 - progress),
+      background:
+        index % 4 === 0
+          ? "linear-gradient(90deg, transparent 0%, rgba(120,148,216,0.04) 16%, rgba(255,214,168,0.16) 50%, rgba(126,150,225,0.04) 84%, transparent 100%)"
+          : "linear-gradient(90deg, transparent 0%, rgba(86,112,188,0.025) 14%, rgba(255,193,148,0.1) 50%, rgba(80,108,182,0.03) 86%, transparent 100%)",
+    };
+  });
+  const reflectionStrips = Array.from({ length: 8 }, (_, index) => {
+    const progress = index / 7;
+    return {
+      top: 5 + Math.pow(progress, 1.35) * 58,
+      width: 5 + progress * 18,
+      height: 1.1 + progress * 5.2,
+      opacity: 0.2 - progress * 0.075,
+      blur: 4 + progress * 8,
+    };
   });
 
   return (
@@ -142,119 +161,271 @@ function OceanPlane({ palette }: { palette: SkyPalette }) {
       <div
         className="absolute inset-0"
         style={{
-          clipPath: "polygon(0 16%, 100% 0, 100% 100%, 0 100%)",
+          clipPath: "polygon(0 14%, 100% 2%, 100% 100%, 0 100%)",
           background:
-            "linear-gradient(180deg, rgba(28,34,68,0.72) 0%, rgba(8,18,44,0.92) 34%, rgba(4,10,26,0.98) 100%)",
+            "linear-gradient(180deg, rgba(38,44,82,0.62) 0%, rgba(15,24,56,0.86) 24%, rgba(6,14,34,0.96) 58%, rgba(3,8,21,0.99) 100%)",
         }}
       />
 
       <div
-        className="absolute left-1/2 top-[4%] h-[56%] w-[18%] -translate-x-1/2 rounded-[999px] blur-3xl"
+        className="absolute left-1/2 top-[4%] h-[70%] w-[28%] -translate-x-1/2 rounded-[999px] blur-3xl"
         style={{
-          background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,194,142,0.18) 32%, transparent 76%)`,
-          opacity: 0.95,
+          background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,205,155,0.14) 26%, rgba(91,106,164,0.08) 62%, transparent 80%)`,
+          opacity: 0.92,
         }}
       />
 
-      {bands.map((band, index) => (
+      <div
+        className="absolute inset-x-0 top-[1.3%] h-[14%]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,236,204,0.08) 0%, rgba(255,236,204,0.02) 45%, transparent 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-x-0 top-[10%] h-[55%]"
+        style={{
+          background:
+            "repeating-linear-gradient(180deg, rgba(255,232,210,0.022) 0 1px, transparent 1px 18px)",
+          opacity: 0.6,
+        }}
+      />
+
+      <div
+        className="absolute left-1/2 top-[6%] h-[72%] w-[12%] -translate-x-1/2 rounded-[999px] blur-[36px]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,223,190,0.18) 0%, rgba(255,193,146,0.16) 26%, rgba(120,134,196,0.07) 58%, transparent 100%)",
+        }}
+      />
+
+      {reflectionStrips.map((strip, index) => (
         <div
           key={index}
-          className="absolute rounded-full blur-[1px]"
+          className="absolute left-1/2 -translate-x-1/2 rounded-full"
           style={{
-            left: `${band.inset}%`,
-            right: `${band.inset}%`,
-            top: `${band.top}%`,
-            height: `${1.2 + index * 0.25}%`,
-            opacity: band.opacity,
+            top: `${strip.top}%`,
+            width: `${strip.width}%`,
+            height: `${strip.height}%`,
+            opacity: strip.opacity,
+            filter: `blur(${strip.blur}px)`,
             background:
-              "linear-gradient(90deg, transparent 0%, rgba(158,198,255,0.14) 18%, rgba(255,199,146,0.3) 50%, rgba(158,198,255,0.14) 82%, transparent 100%)",
+              "linear-gradient(90deg, transparent 0%, rgba(255,228,196,0.06) 10%, rgba(255,210,156,0.28) 50%, rgba(152,179,255,0.08) 90%, transparent 100%)",
+          }}
+        />
+      ))}
+
+      {waveBands.map((band, index) => (
+        <div
+          key={`wave-${index}`}
+          className="absolute left-1/2 rounded-[999px]"
+          style={{
+            top: `${band.top}%`,
+            width: `${band.width}%`,
+            height: `${band.height}%`,
+            opacity: band.opacity,
+            filter: `blur(${band.blur}px)`,
+            background: band.background,
+            transform: `translateX(-50%) rotate(${band.rotate}deg)`,
           }}
         />
       ))}
 
       <div
-        className="absolute left-1/2 top-[6%] h-[48%] w-[12%] -translate-x-1/2 rounded-[999px] blur-2xl"
+        className="absolute left-1/2 top-[10%] h-[54%] w-[52%] -translate-x-1/2 blur-[44px]"
         style={{
           background:
-            "linear-gradient(180deg, rgba(255,222,176,0.32) 0%, rgba(255,188,142,0.22) 45%, transparent 100%)",
+            "radial-gradient(ellipse at center, rgba(255,184,130,0.12) 0%, rgba(255,184,130,0.04) 38%, transparent 72%)",
         }}
       />
-      <div className="absolute inset-x-0 top-0 h-[22%] bg-gradient-to-b from-white/[0.08] to-transparent" />
+      <div className="absolute inset-x-0 bottom-[18%] h-[20%] bg-gradient-to-t from-[#021020]/0 via-[#021020]/18 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-[#020611] via-[#020611]/80 to-transparent" />
     </div>
   );
 }
 
-function DistantCoastline() {
+function DistantCoastline({ palette }: { palette: SkyPalette }) {
   return (
     <>
       <div
-        className="pointer-events-none absolute inset-x-0"
+        className="pointer-events-none absolute inset-x-0 blur-xl"
         style={{
-          top: "56%",
-          height: "6.5%",
+          top: "53.6%",
+          height: "5.8%",
           clipPath:
-            "polygon(0 72%, 8% 70%, 16% 66%, 24% 58%, 35% 54%, 48% 50%, 60% 52%, 72% 56%, 84% 60%, 100% 66%, 100% 100%, 0 100%)",
+            "polygon(0 88%, 7% 84%, 15% 78%, 24% 69%, 34% 63%, 47% 58%, 60% 61%, 73% 66%, 86% 70%, 100% 76%, 100% 100%, 0 100%)",
           background:
-            "linear-gradient(180deg, rgba(20,18,30,0.95) 0%, rgba(6,10,20,0.98) 100%)",
+            "linear-gradient(180deg, rgba(121,114,146,0.28) 0%, rgba(67,70,96,0.18) 68%, rgba(22,28,44,0.08) 100%)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 blur-xl"
+        className="pointer-events-none absolute left-[-1%]"
         style={{
-          top: "53.5%",
-          height: "5%",
+          top: "55.4%",
+          height: "4.5%",
+          width: "29%",
+          clipPath:
+            "polygon(0 90%, 13% 84%, 26% 74%, 38% 62%, 50% 54%, 62% 50%, 74% 54%, 86% 61%, 100% 70%, 100% 100%, 0 100%)",
           background:
-            "linear-gradient(180deg, rgba(255,194,146,0.15), rgba(255,194,146,0.04) 45%, transparent 100%)",
+            "linear-gradient(180deg, rgba(66,61,83,0.42) 0%, rgba(20,22,36,0.74) 100%)",
+          filter: "blur(0.8px)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute right-[-2%]"
+        style={{
+          top: "55%",
+          height: "8.8%",
+          width: "29%",
+          clipPath:
+            "polygon(0 82%, 13% 72%, 28% 58%, 44% 43%, 59% 28%, 74% 14%, 88% 8%, 100% 18%, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(180deg, rgba(43,45,70,0.42) 0%, rgba(13,17,31,0.82) 100%)",
+          filter: "blur(0.8px)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 h-[8%] w-[48%] -translate-x-1/2 blur-2xl"
+        style={{
+          top: "51.8%",
+          background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,202,156,0.06) 38%, transparent 72%)`,
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0"
+        style={{
+          top: "56.15%",
+          height: "0.55%",
+          background:
+            "linear-gradient(90deg, transparent 0%, rgba(255,211,170,0.18) 44%, rgba(255,211,170,0.28) 50%, rgba(255,211,170,0.18) 56%, transparent 100%)",
         }}
       />
     </>
   );
 }
 
-function ForegroundCliffs() {
+function ForegroundCliffs({ palette }: { palette: SkyPalette }) {
+  const strata = [
+    { bottom: "31.6%", left: "4%", width: "28%", rotate: -10, opacity: 0.18 },
+    { bottom: "29.2%", left: "7%", width: "24%", rotate: -12, opacity: 0.12 },
+    { bottom: "26.7%", left: "11%", width: "18%", rotate: -14, opacity: 0.1 },
+  ];
+
   return (
     <>
       <div
-        className="pointer-events-none absolute bottom-0 left-[-5%] h-[42%] w-[42%]"
+        className="pointer-events-none absolute bottom-[-2%] left-[-8%] h-[52%] w-[47%]"
         style={{
           clipPath:
-            "polygon(0 22%, 18% 18%, 34% 10%, 48% 6%, 66% 0, 82% 8%, 92% 20%, 100% 36%, 94% 54%, 84% 66%, 70% 82%, 56% 100%, 0 100%)",
+            "polygon(0 18%, 10% 14%, 20% 11%, 29% 7%, 37% 4%, 46% 1%, 56% 2%, 64% 7%, 72% 16%, 79% 28%, 84% 40%, 88% 53%, 93% 67%, 98% 85%, 92% 100%, 0 100%)",
           background:
-            "linear-gradient(148deg, rgba(22,24,33,0.98) 0%, rgba(64,52,44,0.94) 46%, rgba(18,21,29,0.98) 100%)",
-          boxShadow: "26px -18px 88px rgba(0,0,0,0.42)",
+            "linear-gradient(155deg, rgba(13,16,24,0.98) 0%, rgba(24,26,36,0.98) 30%, rgba(7,9,14,0.99) 100%)",
+          boxShadow: "30px -22px 110px rgba(0,0,0,0.46)",
         }}
       />
       <div
-        className="pointer-events-none absolute left-[-3%] h-[7%] w-[39%]"
+        className="pointer-events-none absolute bottom-0 left-[-4%] h-[47%] w-[40%]"
         style={{
-          bottom: "35.8%",
           clipPath:
-            "polygon(0 74%, 12% 70%, 24% 60%, 38% 50%, 52% 34%, 66% 18%, 82% 0, 100% 14%, 100% 100%, 0 100%)",
+            "polygon(0 28%, 10% 23%, 20% 18%, 30% 13%, 40% 9%, 49% 8%, 58% 13%, 66% 22%, 73% 34%, 79% 47%, 83% 60%, 85% 74%, 83% 100%, 0 100%)",
           background:
-            "linear-gradient(90deg, rgba(39,58,43,0.92) 0%, rgba(55,80,58,0.9) 48%, rgba(74,102,74,0.74) 100%)",
+            "linear-gradient(160deg, rgba(96,71,55,0.88) 0%, rgba(56,46,40,0.92) 34%, rgba(22,24,32,0.98) 100%)",
         }}
       />
       <div
-        className="pointer-events-none absolute left-[6%] h-px w-[19%] rotate-[-8deg] bg-gradient-to-r from-white/18 to-transparent"
-        style={{ bottom: "37.2%" }}
-      />
-      <div
-        className="pointer-events-none absolute bottom-[18%] right-[-2%] h-[14%] w-[24%]"
+        className="pointer-events-none absolute left-[-1%] h-[5.4%] w-[24%]"
         style={{
+          bottom: "36.4%",
           clipPath:
-            "polygon(0 62%, 18% 44%, 42% 26%, 66% 0, 100% 18%, 100% 100%, 0 100%)",
+            "polygon(0 86%, 13% 82%, 26% 77%, 39% 70%, 53% 60%, 67% 45%, 80% 26%, 91% 8%, 98% 0, 100% 4%, 100% 100%, 0 100%)",
           background:
-            "linear-gradient(180deg, rgba(17,23,38,0.94) 0%, rgba(7,10,18,0.98) 100%)",
+            "linear-gradient(90deg, rgba(43,63,49,0.94) 0%, rgba(72,94,70,0.78) 56%, rgba(105,128,100,0.08) 100%)",
+          filter: "blur(0.25px)",
         }}
       />
       <div
-        className="pointer-events-none absolute bottom-[33%] left-[12%] h-[10%] w-[18%] rounded-full blur-3xl"
-        style={{ background: "rgba(255,177,126,0.08)" }}
+        className="pointer-events-none absolute left-[4%] h-px w-[17%]"
+        style={{
+          bottom: "36.9%",
+          transform: "rotate(-11deg)",
+          background:
+            "linear-gradient(90deg, rgba(255,231,203,0.18) 0%, rgba(255,231,203,0.04) 88%, transparent 100%)",
+        }}
       />
       <div
-        className="pointer-events-none absolute bottom-[29%] right-[8%] h-[10%] w-[16%] rounded-full blur-3xl"
-        style={{ background: "rgba(255,190,145,0.08)" }}
+        className="pointer-events-none absolute bottom-[18.3%] left-[2%] h-[18%] w-[20%]"
+        style={{
+          clipPath:
+            "polygon(0 72%, 16% 58%, 34% 42%, 54% 24%, 76% 8%, 100% 0, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(150deg, rgba(81,62,50,0.52) 0%, rgba(30,28,34,0.76) 36%, rgba(9,12,18,0.96) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[31.8%] left-[7%] h-px w-[22%]"
+        style={{
+          transform: "rotate(-12deg)",
+          background:
+            "linear-gradient(90deg, rgba(255,225,193,0.26) 0%, rgba(255,225,193,0.08) 72%, transparent 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[24.2%] left-[11%] h-px w-[15%]"
+        style={{
+          transform: "rotate(-15deg)",
+          background:
+            "linear-gradient(90deg, rgba(255,210,170,0.18) 0%, rgba(255,210,170,0.04) 82%, transparent 100%)",
+        }}
+      />
+      {strata.map((line) => (
+        <div
+          key={`${line.bottom}-${line.left}`}
+          className="pointer-events-none absolute h-px"
+          style={{
+            bottom: line.bottom,
+            left: line.left,
+            width: line.width,
+            opacity: line.opacity,
+            transform: `rotate(${line.rotate}deg)`,
+            background:
+              "linear-gradient(90deg, rgba(255,232,205,0.9) 0%, rgba(255,206,158,0.24) 24%, rgba(255,206,158,0.04) 100%)",
+          }}
+        />
+      ))}
+      <div
+        className="pointer-events-none absolute bottom-[26%] left-[8%] h-[16%] w-[18%] rounded-full blur-[44px]"
+        style={{ background: `radial-gradient(circle, ${palette.sunGlow} 0%, transparent 72%)` }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[12%] right-[-3%] h-[23%] w-[29%]"
+        style={{
+          clipPath:
+            "polygon(0 76%, 12% 66%, 24% 56%, 39% 42%, 54% 24%, 70% 8%, 84% 0, 100% 14%, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(180deg, rgba(22,28,44,0.78) 0%, rgba(8,12,22,0.98) 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[16.5%] right-[7%] h-[12%] w-[17%]"
+        style={{
+          clipPath:
+            "polygon(0 82%, 20% 60%, 42% 36%, 66% 14%, 100% 0, 100% 100%, 0 100%)",
+          background:
+            "linear-gradient(155deg, rgba(56,53,66,0.38) 0%, rgba(17,18,28,0.86) 100%)",
+          filter: "blur(0.4px)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[17.8%] right-[6%] h-px w-[18%]"
+        style={{
+          transform: "rotate(-6deg)",
+          background:
+            "linear-gradient(90deg, rgba(255,214,182,0.2) 0%, rgba(255,214,182,0.06) 68%, transparent 100%)",
+        }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-[20.4%] right-[4%] h-[12%] w-[20%] rounded-full blur-[36px]"
+        style={{ background: "rgba(255,196,146,0.05)" }}
       />
     </>
   );
@@ -446,9 +617,25 @@ export function TonightCard({ today }: Props) {
             width: `${palette.sunSize}vw`,
             height: `${palette.sunSize}vw`,
             transform: "translate(-50%, -50%)",
-            background: `radial-gradient(circle, ${palette.sunColor} 0%, ${palette.sunColor}88 25%, ${palette.sunGlow} 50%, transparent 70%)`,
+            background: `radial-gradient(circle, rgba(255,248,230,0.92) 0%, ${palette.sunColor} 22%, ${palette.sunColor}88 44%, ${palette.sunGlow} 62%, transparent 78%)`,
             filter: `blur(${palette.sunBlur}px)`,
             opacity: palette.glowOpacity,
+          }}
+        />
+      )}
+
+      {!photoUrl && (
+        <div
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            left: "52%",
+            top: "55.1%",
+            width: `${palette.sunSize * 1.4}vw`,
+            height: `${palette.sunSize * 0.42}vw`,
+            transform: "translate(-50%, -50%)",
+            background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,214,172,0.12) 48%, transparent 82%)`,
+            filter: "blur(18px)",
+            opacity: Math.min(0.92, palette.glowOpacity * 1.45),
           }}
         />
       )}
@@ -460,10 +647,10 @@ export function TonightCard({ today }: Props) {
           style={{
             left: "52%",
             top: "54.8%",
-            width: `${palette.sunSize * 0.2}vw`,
-            height: `${palette.sunSize * 0.2}vw`,
-            transform: "translate(-50%, -50%)",
-            background: palette.sunColor,
+            width: `${palette.sunSize * 0.18}vw`,
+            height: `${palette.sunSize * 0.175}vw`,
+            transform: "translate(-50%, -50%) scaleY(0.94)",
+            background: `linear-gradient(180deg, rgba(255,249,230,0.98) 0%, ${palette.sunColor} 68%, rgba(255,181,120,0.86) 100%)`,
             boxShadow: `0 0 ${palette.sunSize * 2}px ${palette.sunGlow}`,
             opacity: Math.min(1, palette.glowOpacity * 1.8),
           }}
@@ -471,8 +658,8 @@ export function TonightCard({ today }: Props) {
       )}
 
       <OceanPlane palette={palette} />
-      <DistantCoastline />
-      <ForegroundCliffs />
+      <DistantCoastline palette={palette} />
+      <ForegroundCliffs palette={palette} />
       <SkyBirds horizonPct={56.5} />
 
       <div className="relative z-10 flex h-full flex-1 flex-col px-6 py-8 md:px-10">

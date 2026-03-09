@@ -51,6 +51,29 @@ async function verifyMessengerCycle(page, issues) {
   }
 }
 
+async function swipeCarousel(page, direction) {
+  const viewport = page.locator('[data-testid="carousel-viewport"]');
+  const box = await viewport.boundingBox();
+
+  if (!box) {
+    throw new Error("Carousel viewport was not visible for swipe testing.");
+  }
+
+  const y = box.y + box.height * 0.58;
+  const startX = direction === "left"
+    ? box.x + box.width * 0.78
+    : box.x + box.width * 0.22;
+  const endX = direction === "left"
+    ? box.x + box.width * 0.22
+    : box.x + box.width * 0.78;
+
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(endX, y, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+}
+
 async function runDesktopFlow() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -124,11 +147,32 @@ async function runMobileFlow() {
     issues.push("Main dock CTA was not visible on mobile.");
   }
 
-  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 1.9, behavior: "instant" }));
-  await page.waitForTimeout(900);
+  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 0.35, behavior: "instant" }));
+  await page.waitForTimeout(700);
+  const stillInitialLabel = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!stillInitialLabel?.toLowerCase().includes("tonight")) {
+    issues.push("Mobile carousel still rotates from vertical scrolling.");
+  }
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.waitForTimeout(300);
+
+  await swipeCarousel(page, "left");
+  const countdownLabel = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!countdownLabel?.toLowerCase().includes("should i go")) {
+    issues.push("Mobile left swipe did not rotate into the countdown section.");
+  }
+
+  await swipeCarousel(page, "left");
   const forecastLabel = await page.locator('[data-testid="carousel-label"]').textContent();
   if (!forecastLabel?.toLowerCase().includes("6-day forecast")) {
-    issues.push("Forecast section was not reachable on mobile.");
+    issues.push("Mobile left swipe did not rotate into the forecast section.");
+  }
+
+  await swipeCarousel(page, "right");
+  const backtrackLabel = await page.locator('[data-testid="carousel-label"]').textContent();
+  if (!backtrackLabel?.toLowerCase().includes("should i go")) {
+    issues.push("Mobile right swipe did not rotate back to the previous section.");
   }
 
   await page.screenshot({ path: "./.tmp-mobile.png", fullPage: true });

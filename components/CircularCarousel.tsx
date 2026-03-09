@@ -1,7 +1,13 @@
 "use client";
 
 import { useScroll, useMotionValueEvent } from "framer-motion";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -18,6 +24,9 @@ interface Props {
   sections: CarouselSection[];
 }
 
+const MOBILE_BREAKPOINT = 767;
+const SWIPE_THRESHOLD = 48;
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -32,8 +41,21 @@ export function CircularCarousel({ sections }: Props) {
   const activeIdxRef = useRef(0);
   const prevZRef = useRef<number[]>([]);
   const dimsRef = useRef({ w: 1200, h: 800 });
+  const swipeRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    deltaX: 0,
+    deltaY: 0,
+    tracking: false,
+  });
 
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches,
+  );
   const [activeIndex, setActiveIndex] = useState(0);
+  const isMobileRef = useRef(isMobile);
 
   const n = sections.length;
   const stepAngle = 360 / n;
@@ -43,6 +65,14 @@ export function CircularCarousel({ sections }: Props) {
     target: containerRef,
     offset: ["start start", "end end"],
   });
+
+  const setCarouselIndex = (idx: number) => {
+    const normalized = ((idx % n) + n) % n;
+    activeIdxRef.current = normalized;
+    setActiveIndex((prev) => (prev === normalized ? prev : normalized));
+  };
+
+  const indexFromProgress = (v: number) => Math.round(v * LOOPS * n) % n;
 
   /* ---------- Responsive dimensions ---------- */
   useEffect(() => {
@@ -56,6 +86,31 @@ export function CircularCarousel({ sections }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const syncMode = () => {
+      const mobile = media.matches;
+      isMobileRef.current = mobile;
+      setIsMobile(mobile);
+
+      if (!mobile) {
+        const nextProgress = scrollYProgress.get();
+        progressRef.current = nextProgress;
+        setCarouselIndex(indexFromProgress(nextProgress));
+        return;
+      }
+
+      tick();
+    };
+
+    syncMode();
+    media.addEventListener("change", syncMode);
+    return () => media.removeEventListener("change", syncMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollYProgress, n]);
+
   /* ------------------------------------------------------------------
    * HOT PATH — runs every scroll frame.
    * ONLY `transform` + `opacity` — both are GPU-composited and
@@ -63,8 +118,9 @@ export function CircularCarousel({ sections }: Props) {
    * `onActiveChange` which fires ~5 times during the full scroll.
    * ---------------------------------------------------------------- */
   const tick = () => {
-    const p = progressRef.current;
-    const rotation = p * LOOPS * 360;
+    const rotation = isMobileRef.current
+      ? activeIdxRef.current * stepAngle
+      : progressRef.current * LOOPS * 360;
     const { w, h } = dimsRef.current;
     const RX = w * 0.34;
     const RY = h * 0.18;
@@ -94,6 +150,54 @@ export function CircularCarousel({ sections }: Props) {
         el.style.zIndex = String(z);
       }
     }
+  };
+
+  const resetSwipe = () => {
+    swipeRef.current = {
+      pointerId: -1,
+      startX: 0,
+      startY: 0,
+      deltaX: 0,
+      deltaY: 0,
+      tracking: false,
+    };
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isMobileRef.current || !event.isPrimary) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    swipeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      deltaX: 0,
+      deltaY: 0,
+      tracking: true,
+    };
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!isMobileRef.current || !swipe.tracking) return;
+    if (swipe.pointerId !== event.pointerId) return;
+
+    swipe.deltaX = event.clientX - swipe.startX;
+    swipe.deltaY = event.clientY - swipe.startY;
+  };
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const swipe = swipeRef.current;
+    if (!isMobileRef.current || !swipe.tracking) return;
+    if (swipe.pointerId !== event.pointerId) return;
+
+    const { deltaX, deltaY } = swipe;
+    resetSwipe();
+
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+    if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    setCarouselIndex(activeIdxRef.current + (deltaX < 0 ? 1 : -1));
   };
 
   /* ------------------------------------------------------------------
@@ -135,28 +239,38 @@ export function CircularCarousel({ sections }: Props) {
   };
 
   useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (isMobileRef.current) return;
+
     progressRef.current = v;
     tick();
 
-    const idx = Math.round(v * LOOPS * n) % n;
+    const idx = indexFromProgress(v);
     if (idx !== activeIdxRef.current) {
-      activeIdxRef.current = idx;
-      setActiveIndex(idx);
-      onActiveChange(idx);
+      setCarouselIndex(idx);
     }
   });
 
-  /* Initial paint */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => onActiveChange(0), []);
+  useEffect(() => {
+    isMobileRef.current = isMobile;
+    onActiveChange(activeIndex);
+    tick();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, isMobile]);
 
   return (
     <div
       ref={containerRef}
-      style={{ height: `${n * LOOPS * 100 + 100}vh` }}
+      style={{ height: isMobile ? "100dvh" : `${n * LOOPS * 100 + 100}vh` }}
       className="touch-action-pan-y"
     >
-      <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden">
+      <div
+        data-testid="carousel-viewport"
+        className="sticky top-0 flex h-screen items-center justify-center overflow-hidden"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={resetSwipe}
+      >
         {/* Ambient glow */}
         <div
           ref={glowRef}
@@ -178,7 +292,14 @@ export function CircularCarousel({ sections }: Props) {
                 itemsRef.current[i] = el;
               }}
               className="absolute flex items-center justify-center contain-layout-paint"
-              style={{ width: "100vw", height: "100dvh", willChange: "transform, opacity" }}
+              style={{
+                width: "100vw",
+                height: "100dvh",
+                willChange: "transform, opacity",
+                transition: isMobile
+                  ? "transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms cubic-bezier(0.22, 1, 0.36, 1)"
+                  : undefined,
+              }}
             >
               <div className="carousel-card">
                 {near ? (
