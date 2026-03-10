@@ -5,11 +5,12 @@ import { Cloud, CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, RotateCcw
 import { type ComponentType, useMemo, useState } from "react";
 import type { SunsetInputFactors } from "@/lib/types";
 import { calculateSunsetScore } from "@/lib/scoreSunset";
-import { roundTo } from "@/lib/utils";
+import { cn, roundTo } from "@/lib/utils";
 import { SkyCanvas } from "@/components/SkyCanvas";
 
 interface SunsetSimulatorProps {
   initialFactors: SunsetInputFactors;
+  bare?: boolean;
 }
 
 interface SliderConfig {
@@ -44,7 +45,10 @@ function sliderValueLabel(key: keyof SunsetInputFactors, value: number) {
   return `${Math.round(value)}%`;
 }
 
-export function SunsetSimulator({ initialFactors }: SunsetSimulatorProps) {
+export function SunsetSimulator({
+  initialFactors,
+  bare = false,
+}: SunsetSimulatorProps) {
   const [factors, setFactors] = useState<SunsetInputFactors>(initialFactors);
 
   const result = useMemo(() => calculateSunsetScore(factors), [factors]);
@@ -54,19 +58,32 @@ export function SunsetSimulator({ initialFactors }: SunsetSimulatorProps) {
   };
 
   return (
-    <section id="simulator" className="relative mx-auto w-full max-w-6xl px-6 py-24 md:px-10">
+    <section
+      id={bare ? undefined : "simulator"}
+      className={cn(
+        "relative overflow-hidden bg-[#040610]",
+        bare ? "flex h-full min-h-[100dvh] w-full flex-1 flex-col" : "mx-auto w-full max-w-6xl px-6 py-24 md:px-10",
+      )}
+    >
       <div className="pointer-events-none absolute left-10 top-6 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,175,122,0.16),rgba(255,175,122,0))] blur-2xl" />
-      <div className="mb-10 max-w-3xl space-y-4">
-        <p className="text-xs uppercase tracking-[0.22em] text-white/55">Play with the sky</p>
-        <h2 className="text-4xl leading-[0.95] tracking-tight text-white md:text-6xl">
-          Build your own sunset.
-        </h2>
-        <p className="text-base text-white/70">
-          Move the sliders and watch the scene and score react instantly.
-        </p>
-      </div>
+      <div className="pointer-events-none absolute right-[-4rem] top-12 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(120,162,255,0.18),rgba(120,162,255,0))] blur-3xl" />
+      <div className="sunset-noise absolute inset-0 opacity-[0.08]" />
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className={cn("relative z-10", bare ? "px-5 py-6 md:px-10 md:py-8" : "")}>
+        <div className={cn("mx-auto w-full max-w-6xl", bare && "flex flex-1 flex-col")}>
+          <div className={cn("max-w-3xl space-y-4", !bare && "mb-10")}>
+            <p className="text-xs uppercase tracking-[0.22em] text-white/55">
+              Play with the sky
+            </p>
+            <h2 className="text-4xl leading-[0.95] tracking-tight text-white md:text-6xl">
+              Build your own sunset.
+            </h2>
+            <p className="text-base text-white/70">
+              Move the sliders and watch the scene and score react instantly.
+            </p>
+          </div>
+
+          <div className={cn("grid gap-6 lg:grid-cols-[1.2fr_0.8fr]", bare && "flex-1 pt-5")}>
         <motion.div
           className="relative overflow-hidden rounded-[2.2rem] border border-white/12 bg-black/30 shadow-[0_28px_85px_rgba(4,10,30,0.48)]"
           initial={{ opacity: 0, y: 24 }}
@@ -200,6 +217,8 @@ export function SunsetSimulator({ initialFactors }: SunsetSimulatorProps) {
             </p>
           </div>
         </motion.aside>
+      </div>
+        </div>
       </div>
     </section>
   );

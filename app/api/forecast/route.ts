@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchLocalPulse } from "@/lib/localPulse";
 import {
   ISLA_VISTA_COORDS,
   buildFallbackForecastPayload,
@@ -27,9 +28,17 @@ function buildOpenMeteoUrl() {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const localPulsePromise = fetchLocalPulse().catch(() => ({
+    generatedAt: new Date().toISOString(),
+    items: [],
+  }));
 
   if (requestUrl.searchParams.get("forceFallback") === "1") {
-    return NextResponse.json(buildFallbackForecastPayload(), {
+    const localPulse = await localPulsePromise;
+    return NextResponse.json({
+      ...buildFallbackForecastPayload(),
+      localPulse,
+    }, {
       headers: {
         "Cache-Control": "no-store",
       },
@@ -39,16 +48,22 @@ export async function GET(request: Request) {
 
   try {
     const openMeteoUrl = buildOpenMeteoUrl();
-    const response = await fetch(openMeteoUrl.toString(), {
-      next: { revalidate: 900 },
-    });
+    const [response, localPulse] = await Promise.all([
+      fetch(openMeteoUrl.toString(), {
+        next: { revalidate: 900 },
+      }),
+      localPulsePromise,
+    ]);
 
     if (!response.ok) {
       throw new Error(`Open-Meteo failed with status ${response.status}`);
     }
 
     const raw = (await response.json()) as OpenMeteoForecastResponse;
-    const payload = normalizeForecastPayload(raw, "open-meteo");
+    const payload = {
+      ...normalizeForecastPayload(raw, "open-meteo"),
+      localPulse,
+    };
 
     return NextResponse.json(payload, {
       headers: {
@@ -56,7 +71,11 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    const fallback = buildFallbackForecastPayload();
+    const localPulse = await localPulsePromise;
+    const fallback = {
+      ...buildFallbackForecastPayload(),
+      localPulse,
+    };
 
     return NextResponse.json(fallback, {
       headers: {

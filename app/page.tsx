@@ -8,6 +8,7 @@ import {
 } from "@/components/CircularCarousel";
 import { ForecastGrid } from "@/components/ForecastGrid";
 import { SunsetCountdown } from "@/components/SunsetCountdown";
+import { SunsetSimulator } from "@/components/SunsetSimulator";
 import { SunsetSpots } from "@/components/SunsetSpots";
 import { TonightCard } from "@/components/TonightCard";
 import { fetchForecast } from "@/lib/fetchForecast";
@@ -101,27 +102,33 @@ export default function HomePage() {
       id: "tonight",
       label: "Tonight's sunset",
       glowColor: "rgba(255,160,100,0.07)",
-      content: <TonightCard today={payload.today} />,
+      content: <TonightCard today={payload.today} pulse={payload.localPulse.items} />,
     },
     {
       id: "countdown",
       label: "Should I go?",
-      glowColor: "rgba(255,190,130,0.06)",
+      glowColor: "rgba(255,196,136,0.12)",
       content: <SunsetCountdown today={payload.today} bare />,
     },
     {
       id: "forecast",
-      label: "6-day forecast",
-      glowColor: "rgba(140,180,255,0.06)",
+      label: "6-day outlook",
+      glowColor: "rgba(142,188,255,0.12)",
       content: (
         <ForecastGrid days={payload.days} bestDate={bestDayDate} />
       ),
     },
     {
+      id: "simulator",
+      label: "Sunset lab",
+      glowColor: "rgba(255,156,146,0.12)",
+      content: <SunsetSimulator initialFactors={payload.today.factors} bare />,
+    },
+    {
       id: "spots",
       label: "Where to watch",
-      glowColor: "rgba(100,160,255,0.06)",
-      content: <SunsetSpots bare />,
+      glowColor: "rgba(106,170,255,0.12)",
+      content: <SunsetSpots bare today={payload.today} />,
     },
   ];
 

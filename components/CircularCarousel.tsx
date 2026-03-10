@@ -34,8 +34,9 @@ const SWIPE_THRESHOLD = 48;
 export function CircularCarousel({ sections }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const dotsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const dotsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const labelRef = useRef<HTMLParagraphElement>(null);
+  const countRef = useRef<HTMLParagraphElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
   const activeIdxRef = useRef(0);
@@ -73,6 +74,39 @@ export function CircularCarousel({ sections }: Props) {
   };
 
   const indexFromProgress = (v: number) => Math.round(v * LOOPS * n) % n;
+
+  const scrollToIndex = (idx: number) => {
+    const normalized = ((idx % n) + n) % n;
+
+    if (isMobileRef.current) {
+      setCarouselIndex(normalized);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container || typeof window === "undefined") return;
+
+    const totalStops = LOOPS * n;
+    const candidates = Array.from({ length: LOOPS }, (_, loop) =>
+      (loop * n + normalized) / totalStops,
+    );
+
+    const current = progressRef.current;
+    const targetProgress = candidates.reduce((closest, candidate) =>
+      Math.abs(candidate - current) < Math.abs(closest - current)
+        ? candidate
+        : closest,
+    );
+
+    const containerTop = window.scrollY + container.getBoundingClientRect().top;
+    const travel = container.offsetHeight - window.innerHeight;
+    const targetY = containerTop + Math.max(0, travel) * targetProgress;
+
+    window.scrollTo({
+      top: targetY,
+      behavior: "smooth",
+    });
+  };
 
   /* ---------- Responsive dimensions ---------- */
   useEffect(() => {
@@ -233,6 +267,9 @@ export function CircularCarousel({ sections }: Props) {
 
     /* Label + glow */
     if (labelRef.current) labelRef.current.textContent = sections[idx].label;
+    if (countRef.current) {
+      countRef.current.textContent = `${String(idx + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`;
+    }
     if (glowRef.current) {
       glowRef.current.style.background = `radial-gradient(ellipse 60% 50% at 50% 55%,${sections[idx].glowColor},transparent)`;
     }
@@ -256,6 +293,41 @@ export function CircularCarousel({ sections }: Props) {
     tick();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex, isMobile]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key !== "ArrowRight" &&
+        event.key !== "ArrowLeft" &&
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp"
+      ) {
+        return;
+      }
+
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
+      if (!inView) return;
+
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        event.preventDefault();
+        scrollToIndex(activeIdxRef.current + 1);
+        return;
+      }
+
+      event.preventDefault();
+      scrollToIndex(activeIdxRef.current - 1);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n]);
 
   return (
     <div
@@ -323,14 +395,23 @@ export function CircularCarousel({ sections }: Props) {
           >
             {sections[0].label}
           </p>
+          <p
+            ref={countRef}
+            className="text-[10px] uppercase tracking-[0.22em] text-white/28"
+          >
+            {`01 / ${String(n).padStart(2, "0")}`}
+          </p>
           <div className="flex items-center gap-2">
             {sections.map((s, i) => (
-              <div
+              <button
                 key={s.id}
                 ref={(el) => {
                   dotsRef.current[i] = el;
                 }}
-                className="h-1.5 rounded-full transition-[width,background] duration-300"
+                type="button"
+                onClick={() => scrollToIndex(i)}
+                aria-label={`Go to ${s.label}`}
+                className="h-1.5 appearance-none rounded-full border-0 p-0 transition-[width,background] duration-300"
                 style={{
                   width: i === 0 ? 24 : 6,
                   background:

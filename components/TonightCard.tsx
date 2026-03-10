@@ -10,37 +10,12 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ForecastDay, SunsetRating } from "@/lib/types";
+import { motion, useReducedMotion } from "framer-motion";
+import { IslaVistaSunsetScene } from "@/components/hero/IslaVistaSunsetScene";
+import { resolveScenePalette } from "@/components/hero/islaVistaPalette";
+import type { ForecastDay, LocalPulseItem, SunsetRating } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { HeroShoreline, type ShorelinePalette } from "./HeroShoreline";
 import { SkyBirds } from "./SkyBirds";
-
-/* ------------------------------------------------------------------ */
-/*  Sky palette — driven by score                                      */
-/* ------------------------------------------------------------------ */
-
-function skyPalette(score: number): ShorelinePalette {
-  if (score >= 85) return {
-    top: "#12061e", mid: "#7a1840", horizon: "#e87020",
-    sunColor: "#fcd34d", sunGlow: "rgba(252,211,77,0.4)", sunSize: 28, sunBlur: 60, glowOpacity: 0.6,
-  };
-  if (score >= 65) return {
-    top: "#140a30", mid: "#5a2050", horizon: "#d06028",
-    sunColor: "#f0a030", sunGlow: "rgba(240,160,48,0.3)", sunSize: 22, sunBlur: 50, glowOpacity: 0.45,
-  };
-  if (score >= 45) return {
-    top: "#0e1444", mid: "#3a1e5a", horizon: "#a04848",
-    sunColor: "#dba060", sunGlow: "rgba(219,160,96,0.25)", sunSize: 16, sunBlur: 40, glowOpacity: 0.3,
-  };
-  if (score >= 25) return {
-    top: "#0a1030", mid: "#1e1845", horizon: "#604860",
-    sunColor: "#c8a880", sunGlow: "rgba(200,168,128,0.15)", sunSize: 12, sunBlur: 30, glowOpacity: 0.18,
-  };
-  return {
-    top: "#080c1e", mid: "#141830", horizon: "#2a2838",
-    sunColor: "#a09888", sunGlow: "rgba(160,152,136,0.1)", sunSize: 9, sunBlur: 20, glowOpacity: 0.1,
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /*  Cloud generation from forecast data                                */
@@ -63,29 +38,29 @@ function generateClouds(
   const baseColor = warm ? "255,180,120" : "180,190,220";
 
   // High clouds — wispy streaks in the top 30%
-  const highCount = Math.ceil(highCloud / 18);
+  const highCount = Math.max(1, Math.ceil(highCloud / 36));
   for (let i = 0; i < highCount && highCloud > 15; i++) {
     clouds.push({
       x: 5 + (i * 100) / highCount + (i * 7) % 15,
-      y: 4 + (i * 11) % 18,
-      w: 25 + (i * 13) % 20,
-      h: 2 + (i * 3) % 4,
-      opacity: 0.08 + (highCloud / 100) * 0.2,
-      blur: 20 + (i * 5) % 15,
+      y: 8 + (i * 9) % 16,
+      w: 32 + (i * 15) % 22,
+      h: 2 + (i * 2) % 3,
+      opacity: 0.06 + (highCloud / 100) * 0.14,
+      blur: 22 + (i * 5) % 12,
       color: warm ? "255,200,140" : "180,200,240",
     });
   }
 
   // Mid clouds — softer, rounder shapes in middle
-  const midCount = Math.ceil(midCloud / 22);
+  const midCount = Math.max(1, Math.ceil(midCloud / 44));
   for (let i = 0; i < midCount && midCloud > 12; i++) {
     clouds.push({
       x: 8 + (i * 100) / midCount + (i * 11) % 12,
-      y: 22 + (i * 7) % 14,
-      w: 18 + (i * 9) % 16,
-      h: 6 + (i * 5) % 6,
-      opacity: 0.06 + (midCloud / 100) * 0.18,
-      blur: 28 + (i * 7) % 12,
+      y: 28 + (i * 8) % 12,
+      w: 24 + (i * 12) % 20,
+      h: 4 + (i * 3) % 4,
+      opacity: 0.05 + (midCloud / 100) * 0.12,
+      blur: 24 + (i * 6) % 10,
       color: baseColor,
     });
   }
@@ -94,8 +69,8 @@ function generateClouds(
   if (lowCloud > 8) {
     clouds.push({
       x: -5, y: 48, w: 110, h: 10,
-      opacity: 0.08 + (lowCloud / 100) * 0.25,
-      blur: 35,
+      opacity: 0.06 + (lowCloud / 100) * 0.16,
+      blur: 30,
       color: warm ? "200,120,80" : "120,130,160",
     });
   }
@@ -153,10 +128,13 @@ function loadRatings(): StoredRating[] {
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-interface Props { today: ForecastDay; }
+interface Props {
+  today: ForecastDay;
+  pulse: LocalPulseItem[];
+}
 
-export function TonightCard({ today }: Props) {
-  const palette = skyPalette(today.score);
+export function TonightCard({ today, pulse }: Props) {
+  const reduceMotion = useReducedMotion();
   const clouds = useMemo(
     () => generateClouds(
       today.factors.highCloud,
@@ -190,6 +168,7 @@ export function TonightCard({ today }: Props) {
   const todaysRatingIndex = todaysRating
     ? RATINGS.findIndex((rating) => rating.id === todaysRating)
     : -1;
+  const scenePalette = resolveScenePalette(today.score, todaysRating);
 
   const submitRating = (r: SunsetRating) => {
     if (!canRate) return;
@@ -225,6 +204,8 @@ export function TonightCard({ today }: Props) {
 
   /* ---- Share ---- */
   const [shared, setShared] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [showRatingPanel, setShowRatingPanel] = useState(false);
   const shareText = `Tonight's IV sunset score: ${today.score}/100 (${today.label}) — Sunset at ${today.sunsetTime}`;
 
   const handleShare = useCallback(async () => {
@@ -241,20 +222,7 @@ export function TonightCard({ today }: Props) {
   /* ---- Render ---- */
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(180deg, ${palette.top} 0%, ${palette.mid} 40%, ${palette.horizon} 62%, ${palette.top} 100%)`,
-        }}
-      />
-
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 72%, rgba(255,196,146,0.16) 0%, rgba(255,196,146,0.02) 28%, transparent 58%), radial-gradient(circle at 14% 18%, rgba(112,132,255,0.18) 0%, transparent 34%)",
-        }}
-      />
+      <IslaVistaSunsetScene className="absolute inset-0" palette={scenePalette} />
 
       {photoUrl && (
         <div className="absolute inset-x-0 top-0 bottom-[37%]">
@@ -277,72 +245,38 @@ export function TonightCard({ today }: Props) {
         </div>
       )}
 
-      {!photoUrl && clouds.map((c, i) => (
-        <div
+      {!photoUrl && clouds.filter((_, index) => index % 2 === 0).map((c, i) => (
+        <motion.div
           key={i}
           className="pointer-events-none absolute mix-blend-screen"
+          animate={
+            reduceMotion
+              ? undefined
+              : {
+                  x: [0, (i % 2 === 0 ? 14 : -12), 0],
+                  opacity: [0.24, 0.38, 0.24],
+                }
+          }
+          transition={
+            reduceMotion
+              ? undefined
+              : {
+                  duration: 26 + i * 6,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "easeInOut",
+                }
+          }
           style={{
             left: `${c.x}%`,
             top: `${c.y}%`,
             width: `${c.w}%`,
             height: `${c.h}%`,
-            background: `radial-gradient(ellipse at center, rgba(${c.color},${c.opacity}) 0%, transparent 70%)`,
-            filter: `blur(${c.blur}px)`,
+            background: `radial-gradient(ellipse at center, rgba(${c.color},${Math.min(0.44, c.opacity * 0.86)}) 0%, rgba(${c.color},0.14) 40%, transparent 76%)`,
+            filter: `blur(${Math.max(16, c.blur)}px)`,
           }}
         />
       ))}
-
-      {!photoUrl && (
-        <div
-          className="pointer-events-none absolute"
-          style={{
-            left: "52%",
-            top: "54.8%",
-            width: `${palette.sunSize}vw`,
-            height: `${palette.sunSize}vw`,
-            transform: "translate(-50%, -50%)",
-            background: `radial-gradient(circle, rgba(255,248,230,0.92) 0%, ${palette.sunColor} 22%, ${palette.sunColor}88 44%, ${palette.sunGlow} 62%, transparent 78%)`,
-            filter: `blur(${palette.sunBlur}px)`,
-            opacity: palette.glowOpacity,
-          }}
-        />
-      )}
-
-      {!photoUrl && (
-        <div
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            left: "52%",
-            top: "55.1%",
-            width: `${palette.sunSize * 1.4}vw`,
-            height: `${palette.sunSize * 0.42}vw`,
-            transform: "translate(-50%, -50%)",
-            background: `radial-gradient(ellipse at center, ${palette.sunGlow} 0%, rgba(255,214,172,0.12) 48%, transparent 82%)`,
-            filter: "blur(18px)",
-            opacity: Math.min(0.92, palette.glowOpacity * 1.45),
-          }}
-        />
-      )}
-
-      {/* Sun core (bright spot) */}
-      {!photoUrl && (
-        <div
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            left: "52%",
-            top: "54.8%",
-            width: `${palette.sunSize * 0.18}vw`,
-            height: `${palette.sunSize * 0.175}vw`,
-            transform: "translate(-50%, -50%) scaleY(0.94)",
-            background: `linear-gradient(180deg, rgba(255,249,230,0.98) 0%, ${palette.sunColor} 68%, rgba(255,181,120,0.86) 100%)`,
-            boxShadow: `0 0 ${palette.sunSize * 2}px ${palette.sunGlow}`,
-            opacity: Math.min(1, palette.glowOpacity * 1.8),
-          }}
-        />
-      )}
-
-      <HeroShoreline palette={palette} />
-      <SkyBirds horizonPct={56.5} />
+      <SkyBirds horizonPct={76.5} newsItems={pulse} />
 
       <div className="relative z-10 flex h-full flex-1 flex-col px-6 py-8 md:px-10">
         <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center pt-[8vh] text-center">
@@ -354,10 +288,10 @@ export function TonightCard({ today }: Props) {
             <span
               className="block text-[clamp(7rem,18vw,12rem)] font-semibold leading-none"
               style={{
-                background: `linear-gradient(180deg, #fff 0%, ${palette.sunColor} 100%)`,
+                background: `linear-gradient(180deg, #fff 0%, ${scenePalette.glowCore} 100%)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
-                filter: `drop-shadow(0 0 48px ${palette.sunGlow})`,
+                filter: `drop-shadow(0 0 48px ${scenePalette.glowAura})`,
               }}
             >
               {today.score}
@@ -377,16 +311,25 @@ export function TonightCard({ today }: Props) {
           </p>
         </div>
 
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-[18%] h-[22%]"
-          style={{
-            background:
-              "radial-gradient(circle at 50% 70%, rgba(255,189,138,0.14) 0%, rgba(255,189,138,0.06) 26%, transparent 68%)",
-          }}
-        />
+        <div className="absolute right-4 top-24 z-30 flex max-w-[92vw] flex-wrap justify-end gap-2 md:right-8 md:top-28">
+          <button
+            type="button"
+            onClick={() => setShowGuide((prev) => !prev)}
+            className="rounded-full border border-white/16 bg-black/30 px-3.5 py-2 text-[11px] uppercase tracking-[0.16em] text-white/78 backdrop-blur-md transition hover:bg-black/45"
+          >
+            {showGuide ? "Hide guide" : "Scene guide"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRatingPanel((prev) => !prev)}
+            className="rounded-full border border-white/16 bg-black/30 px-3.5 py-2 text-[11px] uppercase tracking-[0.16em] text-white/78 backdrop-blur-md transition hover:bg-black/45"
+          >
+            {showRatingPanel ? "Hide feedback" : "How was tonight?"}
+          </button>
+        </div>
 
-        <div className="absolute inset-x-5 bottom-[4.5rem] z-20 mx-auto flex max-w-6xl flex-col gap-3 md:bottom-20 md:flex-row md:items-end md:justify-between md:gap-5">
-          <div className="w-full max-w-sm rounded-[1.65rem] border border-white/12 bg-[linear-gradient(180deg,rgba(16,21,38,0.36),rgba(12,18,34,0.18))] px-5 py-4 shadow-[0_20px_70px_rgba(3,6,18,0.28)] backdrop-blur-xl">
+        {showGuide && (
+          <div className="absolute right-4 top-36 z-30 w-[min(92vw,24rem)] rounded-[1.65rem] border border-white/14 bg-[linear-gradient(180deg,rgba(16,21,38,0.42),rgba(12,18,34,0.24))] px-5 py-4 shadow-[0_20px_70px_rgba(3,6,18,0.32)] backdrop-blur-xl md:right-8 md:top-40">
             <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">
               Scene guide
             </p>
@@ -402,17 +345,19 @@ export function TonightCard({ today }: Props) {
               Live shoreline loop
             </div>
           </div>
+        )}
 
-          <div className="w-full max-w-[32rem] rounded-[1.75rem] border border-white/12 bg-[linear-gradient(180deg,rgba(10,14,30,0.44),rgba(10,14,30,0.2))] px-4 py-4 shadow-[0_24px_80px_rgba(3,7,18,0.34)] backdrop-blur-xl md:px-5">
+        {showRatingPanel && (
+          <div className="absolute left-1/2 top-[58%] z-30 w-[min(96vw,36rem)] -translate-x-1/2 rounded-[1.75rem] border border-white/14 bg-[linear-gradient(180deg,rgba(10,14,30,0.5),rgba(10,14,30,0.28))] px-4 py-4 shadow-[0_24px_80px_rgba(3,7,18,0.42)] backdrop-blur-xl md:top-[52%] md:px-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.22em] text-white/38">
-                  {canRate ? "How was tonight?" : `Rating unlocks at ${today.sunsetTime}`}
+                  How was tonight?
                 </p>
                 <p className="mt-1 text-sm text-white/64">
                   {canRate
                     ? "Tap the read that matched the sky from the bluff."
-                    : "Save your take once the sun is down."}
+                    : `Save your take once the sun is down (unlocks at ${today.sunsetTime}).`}
                 </p>
               </div>
 
@@ -487,7 +432,8 @@ export function TonightCard({ today }: Props) {
               )}
             </div>
           </div>
-        </div>
+        )}
+
       </div>
 
       {/* Hidden file inputs */}

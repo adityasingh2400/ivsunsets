@@ -67,6 +67,27 @@ export interface ForecastDay extends SunsetScoreResult {
   preview: ForecastPreview;
 }
 
+export type LocalPulseKind = "news" | "event" | "safety";
+
+export interface LocalPulseItem {
+  id: string;
+  title: string;
+  snippet: string;
+  url: string;
+  source: string;
+  kind: LocalPulseKind;
+  publishedAt: string;
+  startsAt?: string;
+  locationLabel?: string;
+  tags: string[];
+  ivScore: number;
+}
+
+export interface LocalPulsePayload {
+  generatedAt: string;
+  items: LocalPulseItem[];
+}
+
 export interface ForecastPayload {
   location: string;
   latitude: number;
@@ -74,6 +95,7 @@ export interface ForecastPayload {
   timezone: string;
   source: "open-meteo" | "fallback";
   generatedAt: string;
+  localPulse: LocalPulsePayload;
   days: ForecastDay[];
   today: ForecastDay;
 }

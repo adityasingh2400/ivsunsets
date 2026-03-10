@@ -205,6 +205,10 @@ export function buildFallbackForecastPayload(): ForecastPayload {
   return {
     ...ISLA_VISTA_COORDS,
     generatedAt: new Date().toISOString(),
+    localPulse: {
+      generatedAt: new Date().toISOString(),
+      items: [],
+    },
     source: "fallback",
     days,
     today: days[0],
@@ -352,6 +356,10 @@ export function normalizeForecastPayload(
     timezone,
     source,
     generatedAt: new Date().toISOString(),
+    localPulse: {
+      generatedAt: new Date().toISOString(),
+      items: [],
+    },
     days,
     today: days[0],
   };
