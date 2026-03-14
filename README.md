@@ -1,111 +1,268 @@
 # IV Sunsets
 
-Predicts how vibrant tonight's Isla Vista sunset will be — scored 0–100 with a full visual breakdown of why.
+Premium Isla Vista sunset forecast experience built with Next.js, TypeScript, Tailwind, Framer Motion, Lenis, and a custom illustrated shoreline hero.
 
-Built with Next.js, Canvas animations, and real-time weather data.
+Live site: [https://iv-sunsets.vercel.app](https://iv-sunsets.vercel.app)
 
 ![Score labels: Poor → Decent → Good → Great → Unreal](https://img.shields.io/badge/score_range-0_to_100-orange)
 
-## What it does
+## Overview
 
-- **Real-time sunset scoring** for Isla Vista, CA using live weather forecasts
-- **6-day outlook** with per-day scores, explanations, and reason chips
-- **Animated sky visualizations** on HTML5 Canvas that respond to forecast data
-- **Interactive simulator** — drag sliders and watch the sky and score react live
-- **Scrollytelling explainer** teaching the science behind great sunsets
-- **Post-sunset feedback** stored locally to calibrate future predictions
+IV Sunsets answers a simple question:
 
-## Quick start
+`Is tonight's Isla Vista sunset worth going out for?`
+
+Instead of a generic weather dashboard, the app presents the forecast as a cinematic product-style experience with:
+
+- a full-screen hero for tonight's outlook
+- a messenger gull animation that loops across the shoreline
+- a "Should I go?" countdown section
+- a 6-day sunset forecast
+- an interactive sunset lab
+- curated viewing spots
+- a lightweight local pulse feed paired with the hero
+
+## Live Product
+
+- Production URL: [https://iv-sunsets.vercel.app](https://iv-sunsets.vercel.app)
+- Forecast API route: [https://iv-sunsets.vercel.app/api/forecast](https://iv-sunsets.vercel.app/api/forecast)
+- Forced fallback test route: [https://iv-sunsets.vercel.app/api/forecast?forceFallback=1](https://iv-sunsets.vercel.app/api/forecast?forceFallback=1)
+
+## Current Experience
+
+### Homepage
+
+The homepage is a scroll / swipe driven carousel with five sections:
+
+1. `Tonight's sunset`
+2. `Should I go?`
+3. `6-day outlook`
+4. `Sunset lab`
+5. `Where to watch`
+
+### Hero
+
+The current hero uses:
+
+- a custom SVG shoreline illustration
+- a dominant opaque foreground bluff on the left
+- a distant right coastline / headland
+- a restrained ocean reflection system
+- a messenger gull that dives, lifts a local note, and returns to its perch
+
+Only atmosphere is translucent:
+
+- sky bloom
+- marine haze
+- sun glow
+- softened water reflections
+
+The land itself is intentionally rendered as solid mass.
+
+### Forecasting
+
+The app defaults to Isla Vista, California:
+
+- Latitude: `34.4133`
+- Longitude: `-119.861`
+- Timezone: `America/Los_Angeles`
+
+The forecast shows today plus the next 5 days.
+
+## Data Sources
+
+Weather data is fetched from:
+
+- [Open-Meteo Forecast API](https://open-meteo.com/)
+- [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api)
+
+Local pulse content is fetched separately in the server route and attached to the forecast payload.
+
+No API keys are required.
+
+## Forecast Model
+
+The scoring model is heuristic, opinionated, and tuned for coastal California rather than claiming meteorological precision.
+
+### Inputs
+
+Hourly inputs used in the scoring window:
+
+- `cloud_cover`
+- `cloud_cover_low`
+- `cloud_cover_mid`
+- `cloud_cover_high`
+- `precipitation`
+- `visibility`
+- `temperature_2m`
+- `dew_point_2m`
+- `wind_speed_10m`
+- `wind_direction_10m`
+- `pm2_5`
+- `aerosol_optical_depth`
+
+Daily inputs used:
+
+- `sunrise`
+- `sunset`
+- `precipitation_sum`
+
+### Scoring Window
+
+- Sunset window: `2 hours before sunset` to `30 minutes after sunset`
+- Rain lookback: prior `6 to 24 hours`
+
+### Output
+
+Each day returns:
+
+- score `0–100`
+- label
+- explanation
+- reason chips
+- factor breakdown
+- normalized sunset window snapshot
+- preview values for mini visual rendering
+
+### Labels
+
+- `0–24` → `Poor`
+- `25–44` → `Decent`
+- `45–64` → `Good`
+- `65–84` → `Great`
+- `85–100` → `Unreal`
+
+### Major Scoring Factors
+
+Implemented in [lib/scoreSunset.ts](/Users/aditya/Desktop/IVSunsets/lib/scoreSunset.ts).
+
+- high cloud support
+- mid cloud support
+- texture support
+- low cloud penalty
+- recent rain bonus
+- contrast bonus
+- dew point spread modifier
+- wind modifier
+- clarity / haze modifier
+- baseline score
+
+## API Behavior
+
+Forecast data is served from [app/api/forecast/route.ts](/Users/aditya/Desktop/IVSunsets/app/api/forecast/route.ts).
+
+Behavior:
+
+- primary source is Open-Meteo
+- air-quality data is fetched in parallel
+- local pulse data is attached to the payload
+- API responses are normalized into a shared frontend shape
+- fallback forecast data is returned if upstream fetches fail
+- `forceFallback=1` can be used to test fallback mode explicitly
+
+Client fetching is handled in [lib/fetchForecast.ts](/Users/aditya/Desktop/IVSunsets/lib/fetchForecast.ts).
+
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Framer Motion
+- Lenis
+- Lucide React
+- Leaflet for map-based sunset spots
+- `d3-shape` for the current shoreline SVG path generation
+- Playwright for smoke tests
+
+## Project Structure
+
+```text
+app/
+  api/forecast/route.ts       Server forecast endpoint
+  how-it-works/page.tsx       Secondary explainer page
+  page.tsx                    Main homepage carousel
+
+components/
+  CircularCarousel.tsx        Main section navigation shell
+  ForecastCard.tsx            Single forecast day card
+  ForecastGrid.tsx            6-day forecast section
+  HeroShoreline.tsx           SVG shoreline illustration for the hero
+  HeroSky.tsx                 Shared hero visual utility
+  Navbar.tsx                  Top-level navigation
+  ScoreBreakdown.tsx          Factor explanation UI
+  ScrollyExplainer.tsx        Scroll narrative section
+  SkyBirds.tsx                Messenger gull + background bird animation
+  SkyCanvas.tsx               Canvas sky rendering
+  SmoothScrollProvider.tsx    Smooth scroll wrapper
+  SpotlightFeature.tsx        Supporting spotlight UI
+  SunsetCountdown.tsx         "Should I go?" section
+  SunsetMap.tsx               Map rendering for spots
+  SunsetSimulator.tsx         Interactive simulator / lab
+  SunsetSpots.tsx             Viewing spots section
+  TonightCard.tsx             Main hero card and shoreline composition
+
+lib/
+  fetchForecast.ts            Client fetch wrapper
+  localPulse.ts               Local pulse fetch / shaping
+  normalizeForecast.ts        Open-Meteo normalization + fallback data
+  scoreSunset.ts              Sunset scoring heuristic
+  types.ts                    Shared payload and domain types
+  utils.ts                    General helpers
+
+scripts/
+  smoke-test.mjs              Playwright smoke coverage
+```
+
+## Running It
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Start development:
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-No API keys needed — all data sources are free and public.
-
-## Data sources
-
-All weather data comes from the [Open-Meteo API](https://open-meteo.com/) (free, no key required).
-
-| Parameter | What it tells us |
-|-----------|-----------------|
-| `cloud_cover_high` | Cirrus wisps that catch warm light |
-| `cloud_cover_mid` | Altocumulus texture and depth |
-| `cloud_cover_low` | Marine layer / fog that blocks the horizon |
-| `cloud_cover` | Overall cloud coverage |
-| `precipitation` | Rain intensity + prior-rain clearing signal |
-| `relative_humidity_2m` | Moisture for atmospheric scattering |
-| `visibility` | Horizon clarity (haze detection) |
-| `sunrise` / `sunset` | Defines the scoring window |
-
-**Location:** Isla Vista, CA (34.4133°N, 119.861°W)
-**Scoring window:** 2 hours before sunset → 30 minutes after
-**Rain lookback:** 6–24 hours before sunset
-
-If the API is unreachable, the app serves fallback forecasts so it never breaks.
-
-## How scoring works
-
-Implemented in `lib/scoreSunset.ts`. Each day gets a 0–100 score:
-
-| Factor | Max impact | What it rewards |
-|--------|-----------|-----------------|
-| High cloud support | +32 pts | Cirrus in the 26–62% sweet spot |
-| Mid cloud support | +24 pts | Altocumulus texture, 20–58% |
-| Cloud texture | +14 pts | Overall coverage 30–72%, penalized if overcast |
-| Low cloud penalty | −34 pts | Marine layer blocking the horizon |
-| Rain bonus | +8 pts | Post-rain clearing with open sky |
-| Texture contrast | +6 pts | High/mid clouds vs. low cloud differential |
-| Humidity bonus | +4 pts | Moderate moisture (40–75%) enhancing scattering |
-| Visibility modifier | −5 to +3 pts | Haze penalty or clear-horizon boost |
-| Baseline | 20 pts | Starting score for any sunset |
-
-**Labels:** Poor (0–24) · Decent (25–44) · Good (45–64) · Great (65–84) · Unreal (85–100)
-
-## Project structure
-
-```
-app/
-  page.tsx                  → Main page, data loading
-  api/forecast/route.ts     → Open-Meteo fetch, normalization, fallback
-  how-it-works/             → Explainer page
-components/
-  HeroSky.tsx               → Full-screen animated hero
-  SkyCanvas.tsx             → Reusable Canvas sky renderer
-  ForecastCard.tsx          → Day card with mini sky preview
-  ScoreBreakdown.tsx        → Factor-by-factor breakdown
-  SunsetSimulator.tsx       → Interactive build-your-own-sunset
-  ScrollyExplainer.tsx      → Scroll-driven educational chapters
-  SpotlightFeature.tsx      → Post-sunset rating UI
-lib/
-  scoreSunset.ts            → Scoring algorithm
-  normalizeForecast.ts      → Sunset window extraction + data shaping
-  types.ts                  → Shared TypeScript interfaces
-  skyRenderer.ts            → Canvas drawing primitives
-  utils.ts                  → General helpers
-scripts/
-  smoke-test.mjs            → Playwright e2e smoke tests
-```
+Next.js will print the local development URL in your terminal.
 
 ## Commands
 
 ```bash
-npm run dev         # Development server
-npm run build       # Production build
-npm run lint        # ESLint
-npm run typecheck   # TypeScript check
-npm run smoke       # Playwright smoke tests
+npm run dev
+npm run build
+npm run lint
+npm run typecheck
+npm run smoke
 ```
 
-## Stack
+## Validation
 
-- **Next.js 16** (App Router + Turbopack)
-- **React 19** + TypeScript
-- **Tailwind CSS 4**
-- **Framer Motion** for scroll/viewport animations
-- **Lenis** for smooth scrolling
-- **HTML5 Canvas** for all sky visualizations
-- **Open-Meteo** for weather data (no API key)
+Current verification flow:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm run smoke
+```
+
+`npm run smoke` checks the main flows:
+
+- homepage loads
+- desktop viewport renders
+- mobile viewport renders
+- reduced motion mode works
+- messenger gull loop appears
+- carousel navigation works
+- no obvious runtime console errors appear
+
+## Notes
+
+- The forecast model is intentionally heuristic.
+- The visual design has been iterated heavily toward a premium editorial coastal illustration rather than a dashboard.
+- The current production deployment is Vercel-backed and GitHub-connected.
