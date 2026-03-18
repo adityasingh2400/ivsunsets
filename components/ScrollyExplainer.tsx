@@ -142,7 +142,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
     {
       label: "High clouds",
       value: bd.highCloudContribution,
-      maxPossible: 32,
+      maxPossible: 28,
       isPenalty: false,
       detail: `${Math.round(today.factors.highCloud)}% cover`,
       barGradient: "from-amber-300/90 to-orange-400/80",
@@ -150,7 +150,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
     {
       label: "Mid clouds",
       value: bd.midCloudContribution,
-      maxPossible: 24,
+      maxPossible: 22,
       isPenalty: false,
       detail: `${Math.round(today.factors.midCloud)}% cover`,
       barGradient: "from-fuchsia-300/90 to-rose-400/80",
@@ -158,7 +158,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
     {
       label: "Texture",
       value: bd.textureContribution,
-      maxPossible: 14,
+      maxPossible: 10,
       isPenalty: false,
       detail: "cloud contrast",
       barGradient: "from-cyan-300/90 to-sky-400/80",
@@ -166,7 +166,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
     {
       label: "Low clouds",
       value: bd.lowCloudPenalty,
-      maxPossible: 34,
+      maxPossible: 32,
       isPenalty: true,
       detail: `${Math.round(today.factors.lowCloud)}% cover`,
       barGradient: "from-rose-400/90 to-red-500/80",
@@ -174,10 +174,18 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
     {
       label: "Rain bonus",
       value: bd.rainBonus,
-      maxPossible: 8,
+      maxPossible: 5,
       isPenalty: false,
       detail: `${today.factors.recentRain.toFixed(1)} mm`,
       barGradient: "from-sky-300/90 to-indigo-400/80",
+    },
+    {
+      label: "Humidity",
+      value: Math.abs(bd.humidityModifier),
+      maxPossible: 4,
+      isPenalty: bd.humidityModifier < 0,
+      detail: `${Math.round(today.factors.relativeHumidity)}% RH`,
+      barGradient: bd.humidityModifier >= 0 ? "from-emerald-300/90 to-teal-400/80" : "from-rose-400/90 to-red-500/80",
     },
   ];
 
@@ -256,7 +264,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
 
       {/* Baseline note */}
       <div className="flex items-baseline justify-between border-t border-white/8 pt-2 text-[11px] text-white/40">
-        <span>Baseline: +{bd.baseline.toFixed(0)}</span>
+        <span>Baseline: +{bd.baseline.toFixed(0)} · wind, saturation, and haze also nudge the score</span>
         <span>Sunset at {today.sunsetTime}</span>
       </div>
     </div>
@@ -316,7 +324,7 @@ export function ScrollyExplainer({ today }: ScrollyExplainerProps) {
       {
         id: "final",
         title: "Tonight\u2019s result",
-        body: `Our heuristic blends all five factors \u2014 high cloud support, mid cloud texture, low cloud penalty, rain bonus, and atmospheric clarity \u2014 into a single sunset score. Tonight lands at ${today.score} with a ${today.label.toLowerCase()} outlook.`,
+        body: `Our model now blends cloud layers, horizon blockage, post-rain clearing, humidity, atmospheric clarity, radiation quality, and forecast confidence into a single sunset score. Tonight lands at ${today.score} with a ${today.label.toLowerCase()} outlook.`,
         caption: `Score: ${today.score}/100 \u2014 ${today.label}`,
         highlight: "Combined score",
         scene: {
