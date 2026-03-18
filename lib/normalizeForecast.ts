@@ -374,9 +374,12 @@ export function normalizeForecastPayload(
     const visibilityWindow = valuesAtIndices(raw.hourly.visibility, sunsetWindowIndices);
     const windSpeedWindow = valuesAtIndices(raw.hourly.wind_speed_10m, sunsetWindowIndices);
     const windDirectionWindow = valuesAtIndices(raw.hourly.wind_direction_10m, sunsetWindowIndices);
-    const rhWindow = valuesAtIndices(raw.hourly.relative_humidity_2m ?? [], sunsetWindowIndices);
-    const directRadWindow = valuesAtIndices(raw.hourly.direct_radiation ?? [], sunsetWindowIndices);
-    const diffuseRadWindow = valuesAtIndices(raw.hourly.diffuse_radiation ?? [], sunsetWindowIndices);
+    const rawRh = raw.hourly.relative_humidity_2m;
+    const rawDirectRad = raw.hourly.direct_radiation;
+    const rawDiffuseRad = raw.hourly.diffuse_radiation;
+    const rhWindow = rawRh?.length ? valuesAtIndices(rawRh, sunsetWindowIndices) : [];
+    const directRadWindow = rawDirectRad?.length ? valuesAtIndices(rawDirectRad, sunsetWindowIndices) : [];
+    const diffuseRadWindow = rawDiffuseRad?.length ? valuesAtIndices(rawDiffuseRad, sunsetWindowIndices) : [];
 
     const proximityWeights = buildSunsetProximityWeights(
       sunsetWindowIndices,

@@ -276,9 +276,13 @@ export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-[#070d1f] text-[11px] uppercase tracking-[0.14em] text-white/65">
                     {factor.title === "Recent rain"
                       ? `${roundTo(factor.value, 1)}mm`
-                      : factor.title === "Visibility"
+                      : factor.title === "Clarity"
                         ? `${roundTo(factor.value, 0)}km`
-                        : `${Math.round(factor.value)}%`}
+                        : factor.title === "Wind"
+                          ? `${roundTo(factor.value, 0)}km/h`
+                          : factor.title === "Saturation"
+                            ? `${roundTo(factor.value, 1)}°C`
+                            : `${Math.round(factor.value)}%`}
                   </div>
                 </div>
 
