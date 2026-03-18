@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Cloud, CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Cloud, CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, RotateCcw, SlidersHorizontal, Wind } from "lucide-react";
 import { type ComponentType, useMemo, useState } from "react";
 import type { SunsetInputFactors } from "@/lib/types";
 import { calculateSunsetScore } from "@/lib/scoreSunset";
@@ -29,8 +29,13 @@ const sliderConfig: SliderConfig[] = [
   { key: "lowCloud", label: "Low clouds", min: 0, max: 100, step: 1, unit: "%", Icon: CloudFog },
   { key: "totalCloud", label: "Total cloudiness", min: 0, max: 100, step: 1, unit: "%", Icon: Cloud },
   { key: "recentRain", label: "Recent rain", min: 0, max: 8, step: 0.1, unit: "mm", Icon: CloudRain },
-  { key: "humidity", label: "Humidity", min: 0, max: 100, step: 1, unit: "%", Icon: Droplets },
+  { key: "dewPointSpread", label: "Dew point spread", min: 0, max: 15, step: 0.1, unit: "°C", Icon: Droplets },
+  { key: "relativeHumidity", label: "Relative humidity", min: 10, max: 100, step: 1, unit: "%", Icon: Droplets },
   { key: "visibility", label: "Visibility", min: 0, max: 50, step: 0.5, unit: "km", Icon: Eye },
+  { key: "windSpeed", label: "Wind speed", min: 0, max: 40, step: 0.5, unit: "km/h", Icon: Wind },
+  { key: "windDirection", label: "Wind direction", min: 0, max: 360, step: 1, unit: "°", Icon: Wind },
+  { key: "pm25", label: "PM2.5", min: 0, max: 60, step: 0.5, unit: "μg/m³", Icon: Cloud },
+  { key: "aerosolOpticalDepth", label: "Aerosol depth", min: 0, max: 0.6, step: 0.01, unit: "", Icon: Eye },
 ];
 
 function sliderValueLabel(key: keyof SunsetInputFactors, value: number) {
@@ -40,6 +45,30 @@ function sliderValueLabel(key: keyof SunsetInputFactors, value: number) {
 
   if (key === "visibility") {
     return `${roundTo(value, 1)} km`;
+  }
+
+  if (key === "windSpeed") {
+    return `${roundTo(value, 1)} km/h`;
+  }
+
+  if (key === "dewPointSpread") {
+    return `${roundTo(value, 1)}°C`;
+  }
+
+  if (key === "windDirection") {
+    return `${Math.round(value)}°`;
+  }
+
+  if (key === "pm25") {
+    return `${roundTo(value, 1)} μg/m³`;
+  }
+
+  if (key === "aerosolOpticalDepth") {
+    return roundTo(value, 2).toFixed(2);
+  }
+
+  if (key === "relativeHumidity") {
+    return `${Math.round(value)}%`;
   }
 
   return `${Math.round(value)}%`;
@@ -211,9 +240,20 @@ export function SunsetSimulator({
             </p>
             <p className="text-sm text-white/70">
               Texture: +{result.factorBreakdown.textureContribution.toFixed(1)} | Rain: +
-              {result.factorBreakdown.rainBonus.toFixed(1)} | Humidity: +
-              {result.factorBreakdown.humidityBonus.toFixed(1)} | Vis: {result.factorBreakdown.visibilityModifier >= 0 ? "+" : ""}
-              {result.factorBreakdown.visibilityModifier.toFixed(1)}
+              {result.factorBreakdown.rainBonus.toFixed(1)} | Contrast: +
+              {result.factorBreakdown.contrastBonus.toFixed(1)}
+            </p>
+            <p className="text-sm text-white/70">
+              Dew: {result.factorBreakdown.dewPointModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.dewPointModifier.toFixed(1)} | Wind: {result.factorBreakdown.windModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.windModifier.toFixed(1)} | Clarity: {result.factorBreakdown.clarityModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.clarityModifier.toFixed(1)}
+            </p>
+            <p className="text-sm text-white/70">
+              Humidity: {result.factorBreakdown.humidityModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.humidityModifier.toFixed(1)} | Radiation: {result.factorBreakdown.radiationModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.radiationModifier.toFixed(1)} | Stability: {result.factorBreakdown.stabilityModifier >= 0 ? "+" : ""}
+              {result.factorBreakdown.stabilityModifier.toFixed(1)}
             </p>
           </div>
         </motion.aside>

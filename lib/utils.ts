@@ -21,6 +21,32 @@ export function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+export function weightedAverage(values: number[], weights: number[]) {
+  if (!values.length) {
+    return 0;
+  }
+
+  let totalWeight = 0;
+  let weightedSum = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const w = weights[i] ?? 1;
+    weightedSum += values[i] * w;
+    totalWeight += w;
+  }
+
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+}
+
+export function variance(values: number[]) {
+  if (values.length < 2) {
+    return 0;
+  }
+
+  const mean = average(values);
+  return values.reduce((acc, v) => acc + (v - mean) ** 2, 0) / values.length;
+}
+
 export function sum(values: number[]) {
   if (!values.length) {
     return 0;

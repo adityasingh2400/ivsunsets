@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, Sparkles } from "lucide-react";
+import { CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, Sparkles, Thermometer, Wind } from "lucide-react";
 import { type ComponentType } from "react";
 import type { ForecastDay } from "@/lib/types";
 import { clamp, roundTo } from "@/lib/utils";
@@ -19,6 +19,12 @@ interface BreakdownFactor {
   Icon: ComponentType<{ className?: string }>;
   body: string;
   metricLabel: string;
+}
+
+function compassDirection(degrees: number) {
+  const headings = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const normalized = ((degrees % 360) + 360) % 360;
+  return headings[Math.round(normalized / 45) % headings.length];
 }
 
 function toneFromFactor(factor: BreakdownFactor) {
@@ -120,32 +126,79 @@ export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
       metricLabel: `${roundTo(today.factors.recentRain, 2)} mm prior rain`,
     },
     {
-      title: "Humidity",
-      value: today.factors.humidity,
-      impact: today.factorBreakdown.humidityBonus,
-      meterValue: today.factors.humidity,
+      title: "Saturation",
+      value: today.factors.dewPointSpread,
+      impact: Math.abs(today.factorBreakdown.dewPointModifier),
+      meterValue: today.factorBreakdown.dewPointModifier < 0
+        ? clamp(((4 - today.factors.dewPointSpread) / 4) * 100, 0, 100)
+        : clamp((today.factors.dewPointSpread / 12) * 100, 0, 100),
       Icon: Droplets,
-      isPenalty: false,
+      isPenalty: today.factorBreakdown.dewPointModifier < 0,
       body:
-        today.factors.humidity >= 40 && today.factors.humidity <= 75
-          ? "Moderate moisture enhances light scattering for warmer tones."
-          : "Humidity is outside the range that boosts color saturation.",
-      metricLabel: `${roundTo(today.factors.humidity, 1)}% in sunset window`,
+        today.factorBreakdown.dewPointModifier < -2.5
+          ? "Temperature and dew point are crowding together, which raises fog and horizon haze risk."
+          : today.factorBreakdown.dewPointModifier >= 1
+            ? "A healthier temperature-to-dew-point gap helps keep the low-level air from saturating."
+            : "Low-level moisture looks fairly neutral right now.",
+      metricLabel: `${roundTo(today.factors.dewPointSpread, 1)}°C temp/dew-point spread`,
     },
     {
-      title: "Visibility",
-      value: today.factors.visibility,
-      impact: Math.abs(today.factorBreakdown.visibilityModifier),
-      meterValue: clamp((today.factors.visibility / 50) * 100, 0, 100),
-      Icon: Eye,
-      isPenalty: today.factorBreakdown.visibilityModifier < 0,
+      title: "Wind",
+      value: today.factors.windSpeed,
+      impact: Math.abs(today.factorBreakdown.windModifier),
+      meterValue: clamp((today.factors.windSpeed / 28) * 100, 0, 100),
+      Icon: Wind,
+      isPenalty: today.factorBreakdown.windModifier < 0,
       body:
-        today.factorBreakdown.visibilityModifier < -2
-          ? "Low visibility means haze is likely dimming horizon colors."
-          : today.factors.visibility >= 30
-            ? "Excellent visibility lets sunset light travel cleanly to the horizon."
-            : "Visibility is moderate, unlikely to significantly affect the view.",
-      metricLabel: `${roundTo(today.factors.visibility, 1)} km average`,
+        today.factorBreakdown.windModifier >= 2.5
+          ? "Offshore or cross-shore flow may help keep the marine layer pushed back from the sunset line."
+          : today.factorBreakdown.windModifier <= -2.5
+            ? "Onshore flow can drag marine haze and low cloud back toward the horizon."
+            : "Wind direction looks mixed enough that it probably will not dominate the outcome.",
+      metricLabel: `${roundTo(today.factors.windSpeed, 1)} km/h from ${compassDirection(today.factors.windDirection)}`,
+    },
+    {
+      title: "Clarity",
+      value: today.factors.visibility,
+      impact: Math.abs(today.factorBreakdown.clarityModifier),
+      meterValue: today.factorBreakdown.clarityModifier < 0
+        ? clamp(
+            ((Math.max(0, 12 - today.factors.visibility) / 12) * 45) +
+              ((Math.max(0, today.factors.pm25 - 12) / 25) * 35) +
+              ((Math.max(0, today.factors.aerosolOpticalDepth - 0.12) / 0.18) * 20),
+            0,
+            100,
+          )
+        : clamp(
+            ((today.factors.visibility / 40) * 70) +
+              ((Math.max(0, 12 - today.factors.pm25) / 12) * 30),
+            0,
+            100,
+          ),
+      Icon: Eye,
+      isPenalty: today.factorBreakdown.clarityModifier < 0,
+      body:
+        today.factorBreakdown.clarityModifier < -2
+          ? "Poor visibility or elevated particulates are likely muting color and contrast."
+          : today.factorBreakdown.clarityModifier >= 2
+            ? "Clean air and good visibility should help the warm tones stay crisp."
+            : "Clarity looks moderate, so haze probably stays a secondary factor tonight.",
+      metricLabel: `${roundTo(today.factors.visibility, 1)} km vis · PM2.5 ${roundTo(today.factors.pm25, 1)} μg/m³ · AOD ${roundTo(today.factors.aerosolOpticalDepth, 2)}`,
+    },
+    {
+      title: "Humidity",
+      value: today.factors.relativeHumidity,
+      impact: Math.abs(today.factorBreakdown.humidityModifier),
+      meterValue: today.factors.relativeHumidity,
+      Icon: Thermometer,
+      isPenalty: today.factorBreakdown.humidityModifier < 0,
+      body:
+        today.factorBreakdown.humidityModifier >= 2
+          ? "Dry lower atmosphere keeps Rayleigh scattering pure and colors vivid."
+          : today.factorBreakdown.humidityModifier <= -2
+            ? "High surface humidity can wash out horizon contrast and mute warm tones."
+            : "Surface moisture levels look neutral for color quality.",
+      metricLabel: `${roundTo(today.factors.relativeHumidity, 0)}% relative humidity`,
     },
   ];
 

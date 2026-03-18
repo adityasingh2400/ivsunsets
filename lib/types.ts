@@ -8,8 +8,20 @@ export interface SunsetInputFactors {
   lowCloud: number;
   totalCloud: number;
   recentRain: number;
-  humidity: number;
   visibility: number;
+  dewPointSpread: number;
+  windSpeed: number;
+  windDirection: number;
+  pm25: number;
+  aerosolOpticalDepth: number;
+  relativeHumidity: number;
+  directRadiation: number;
+  diffuseRadiation: number;
+  cloudVariance: number;
+  /** 0 = today (full confidence), higher = further out, max ~1 */
+  confidenceDecay: number;
+  /** Score from the previous day, used as a persistence anchor. -1 if unavailable. */
+  previousDayScore: number;
 }
 
 export interface FactorBreakdown {
@@ -18,9 +30,15 @@ export interface FactorBreakdown {
   textureContribution: number;
   lowCloudPenalty: number;
   rainBonus: number;
-  textureBonus: number;
-  humidityBonus: number;
-  visibilityModifier: number;
+  contrastBonus: number;
+  dewPointModifier: number;
+  windModifier: number;
+  clarityModifier: number;
+  humidityModifier: number;
+  radiationModifier: number;
+  stabilityModifier: number;
+  persistenceModifier: number;
+  confidenceAdjustment: number;
   baseline: number;
 }
 
@@ -42,8 +60,17 @@ export interface SunsetWindowSnapshot {
   averageTotalCloud: number;
   windowPrecipitation: number;
   priorRain: number;
-  averageHumidity: number;
   averageVisibility: number;
+  averageDewPointSpread: number;
+  averageWindSpeed: number;
+  averageWindDirection: number;
+  averagePm25: number;
+  averageAerosolOpticalDepth: number;
+  averageRelativeHumidity: number;
+  averageDirectRadiation: number;
+  averageDiffuseRadiation: number;
+  cloudVariance: number;
+  confidenceDecay: number;
 }
 
 export interface ForecastPreview {
@@ -111,13 +138,29 @@ export interface OpenMeteoForecastResponse {
     cloud_cover_mid: number[];
     cloud_cover_high: number[];
     precipitation: number[];
-    relative_humidity_2m: number[];
     visibility: number[];
+    temperature_2m: number[];
+    dew_point_2m: number[];
+    wind_speed_10m: number[];
+    wind_direction_10m: number[];
+    relative_humidity_2m: number[];
+    direct_radiation: number[];
+    diffuse_radiation: number[];
   };
   daily: {
     time: string[];
     sunrise: string[];
     sunset: string[];
     precipitation_sum: number[];
+  };
+}
+
+export interface OpenMeteoAirQualityResponse {
+  latitude: number;
+  longitude: number;
+  hourly: {
+    time: string[];
+    pm2_5: number[];
+    aerosol_optical_depth: number[];
   };
 }
