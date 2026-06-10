@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+    "sanity": "tsx scripts/score-sanity.ts",
     "smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "eslint-config-next": "16.1.6",
     "playwright": "^1.58.2",
     "tailwindcss": "^4",
+    "tsx": "4.22.4",
     "typescript": "^5"
   }
 }

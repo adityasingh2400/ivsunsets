@@ -6,6 +6,12 @@ export interface SunsetInputFactors {
   highCloud: number;
   midCloud: number;
   lowCloud: number;
+  /**
+   * Low cloud coverage at the offshore probe point ~30 km west of IV,
+   * directly on the sunset light path. The marine layer out there blocks
+   * color even when the sky overhead is clear.
+   */
+  horizonLowCloud: number;
   totalCloud: number;
   recentRain: number;
   visibility: number;
@@ -25,21 +31,33 @@ export interface SunsetInputFactors {
 }
 
 export interface FactorBreakdown {
-  highCloudContribution: number;
-  midCloudContribution: number;
-  textureContribution: number;
-  lowCloudPenalty: number;
+  /** Floor: the sun setting over an ocean horizon is never worth zero. */
+  baseline: number;
+  /** Points available from the high/mid cloud palette (pre-gating). */
+  cloudCanvas: number;
+  /** Points available from a clean open-horizon fade when clouds are sparse. */
+  clearSkyGlow: number;
+  /** Air clarity effect in points: aerosols/visibility/humidity sharpening or muting color. */
+  vividnessModifier: number;
+  /** Points removed because local low cloud blocks the horizon. */
+  marineLayerPenalty: number;
+  /** Points removed because offshore low cloud sits on the sunset light path. */
+  horizonPenalty: number;
+  /** Points removed because a near-solid ceiling smothers the light. */
+  overcastPenalty: number;
+  /** Points removed because the air is near saturation (fog / horizon murk). */
+  fogPenalty: number;
   rainBonus: number;
-  contrastBonus: number;
-  dewPointModifier: number;
   windModifier: number;
-  clarityModifier: number;
-  humidityModifier: number;
-  radiationModifier: number;
   stabilityModifier: number;
   persistenceModifier: number;
   confidenceAdjustment: number;
-  baseline: number;
+  /** Diagnostics (0..1 unless noted): how much paintable cloud exists. */
+  canvas: number;
+  /** Diagnostics: fraction of sunset light that survives all gates. */
+  lightPath: number;
+  /** Diagnostics: air clarity multiplier (~0.55..1.15). */
+  vividness: number;
 }
 
 export interface SunsetScoreResult {
@@ -57,6 +75,7 @@ export interface SunsetWindowSnapshot {
   averageHighCloud: number;
   averageMidCloud: number;
   averageLowCloud: number;
+  averageHorizonLowCloud: number;
   averageTotalCloud: number;
   windowPrecipitation: number;
   priorRain: number;
@@ -152,6 +171,16 @@ export interface OpenMeteoForecastResponse {
     sunrise: string[];
     sunset: string[];
     precipitation_sum: number[];
+  };
+}
+
+/** Offshore probe ~30 km west of IV on the sunset light path. */
+export interface OpenMeteoHorizonResponse {
+  latitude: number;
+  longitude: number;
+  hourly: {
+    time: string[];
+    cloud_cover_low: number[];
   };
 }
 
