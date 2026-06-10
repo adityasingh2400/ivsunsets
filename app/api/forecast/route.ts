@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchLocalPulse } from "@/lib/localPulse";
 import {
+  HORIZON_PROBE_COORDS,
   ISLA_VISTA_COORDS,
   buildFallbackForecastPayload,
   normalizeForecastPayload,
@@ -8,6 +9,7 @@ import {
 import type {
   OpenMeteoAirQualityResponse,
   OpenMeteoForecastResponse,
+  OpenMeteoHorizonResponse,
 } from "@/lib/types";
 
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
@@ -36,6 +38,20 @@ function buildOpenMeteoAirQualityUrl() {
   url.searchParams.set("latitude", String(ISLA_VISTA_COORDS.latitude));
   url.searchParams.set("longitude", String(ISLA_VISTA_COORDS.longitude));
   url.searchParams.set("hourly", "pm2_5,aerosol_optical_depth");
+  url.searchParams.set("timezone", ISLA_VISTA_COORDS.timezone);
+  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("past_days", "1");
+
+  return url;
+}
+
+/** Low cloud at the offshore probe west of IV — the sunset light path. */
+function buildHorizonProbeUrl() {
+  const url = new URL(OPEN_METEO_URL);
+
+  url.searchParams.set("latitude", String(HORIZON_PROBE_COORDS.latitude));
+  url.searchParams.set("longitude", String(HORIZON_PROBE_COORDS.longitude));
+  url.searchParams.set("hourly", "cloud_cover_low");
   url.searchParams.set("timezone", ISLA_VISTA_COORDS.timezone);
   url.searchParams.set("forecast_days", "7");
   url.searchParams.set("past_days", "1");
@@ -74,11 +90,21 @@ export async function GET(request: Request) {
       })
       .catch(() => null);
 
-    const [response, airQualityRaw, localPulse] = await Promise.all([
+    const horizonPromise = fetch(buildHorizonProbeUrl().toString(), {
+      next: { revalidate: 900 },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as OpenMeteoHorizonResponse;
+      })
+      .catch(() => null);
+
+    const [response, airQualityRaw, horizonRaw, localPulse] = await Promise.all([
       fetch(openMeteoUrl.toString(), {
         next: { revalidate: 900 },
       }),
       airQualityPromise,
+      horizonPromise,
       localPulsePromise,
     ]);
 
@@ -88,7 +114,7 @@ export async function GET(request: Request) {
 
     const raw = (await response.json()) as OpenMeteoForecastResponse;
     const payload = {
-      ...normalizeForecastPayload(raw, airQualityRaw, "open-meteo"),
+      ...normalizeForecastPayload(raw, airQualityRaw, horizonRaw, "open-meteo"),
       localPulse,
     };
 

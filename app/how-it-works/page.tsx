@@ -148,7 +148,9 @@ export default function HowItWorksPage() {
               <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/80">cloud_cover_mid</code>,{" "}
               <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/80">cloud_cover_high</code>, and{" "}
               <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-white/80">precipitation</code>{" "}
-              along with daily sunrise/sunset times.
+              along with daily sunrise/sunset times — plus air quality
+              (PM2.5, aerosol optical depth) and a second low-cloud probe
+              over the water west of IV on the sunset light path.
             </p>
           </motion.div>
 
@@ -200,12 +202,15 @@ export default function HowItWorksPage() {
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06]">
               <Layers3 className="h-5 w-5 text-white/70" />
             </div>
-            <h3 className="text-xl text-white">Scoring weights</h3>
+            <h3 className="text-xl text-white">Gated scoring model</h3>
             <p className="text-sm leading-relaxed text-white/65">
-              High cloud support contributes up to ~32 points, mid clouds ~24,
-              texture ~14, with low clouds penalizing up to ~34 points. Recent
-              rain adds a bonus up to ~8 and texture contrast up to ~6. Baseline
-              is 20 points for a clear sky.
+              The high/mid cloud canvas is worth up to ~68 points, but it is
+              multiplied by the light path: local marine layer, offshore low
+              cloud at a probe point ~30 km west of IV, overcast ceiling, and
+              fog risk can each collapse it. Air clarity scales the color
+              ±10%, post-rain clearing adds up to ~6, and offshore flow up to
+              ~5. A clean clear sky floors out around 35 — pleasant, not
+              fireworks.
             </p>
           </motion.div>
 

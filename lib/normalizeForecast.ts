@@ -4,13 +4,13 @@ import {
   type ForecastPayload,
   type ForecastPreview,
   type OpenMeteoForecastResponse,
+  type OpenMeteoHorizonResponse,
   type SunsetInputFactors,
   type SunsetWindowSnapshot,
 } from "@/lib/types";
 import { calculateSunsetScore } from "@/lib/scoreSunset";
 import {
   addDaysToDateKey,
-  average,
   clamp,
   formatClockTime,
   formatDayName,
@@ -27,6 +27,16 @@ export const ISLA_VISTA_COORDS = {
   longitude: -119.861,
   timezone: "America/Los_Angeles",
   location: "Isla Vista, California",
+};
+
+/**
+ * Offshore probe ~30 km due west of IV, over the water on the sunset light
+ * path. Low cloud out there blocks the color before it ever reaches the
+ * bluffs, which a single-point forecast at IV cannot see.
+ */
+export const HORIZON_PROBE_COORDS = {
+  latitude: 34.42,
+  longitude: -120.19,
 };
 
 const DAYS_TO_SHOW = 6;
@@ -128,6 +138,23 @@ function buildSunsetProximityWeights(
   });
 }
 
+function buildHorizonLookup(raw?: OpenMeteoHorizonResponse | null) {
+  const lookup = new Map<string, number>();
+
+  if (!raw?.hourly?.time?.length) {
+    return lookup;
+  }
+
+  for (let index = 0; index < raw.hourly.time.length; index += 1) {
+    const time = raw.hourly.time[index];
+    const value = raw.hourly.cloud_cover_low[index];
+    if (!time || typeof value !== "number" || Number.isNaN(value)) continue;
+    lookup.set(time, value);
+  }
+
+  return lookup;
+}
+
 function buildAirQualityLookup(raw?: OpenMeteoAirQualityResponse | null) {
   const lookup = new Map<string, { pm25: number; aerosolOpticalDepth: number }>();
 
@@ -175,6 +202,7 @@ function buildWindowSnapshot(
     averageHighCloud: roundTo(factors.highCloud, 1),
     averageMidCloud: roundTo(factors.midCloud, 1),
     averageLowCloud: roundTo(factors.lowCloud, 1),
+    averageHorizonLowCloud: roundTo(factors.horizonLowCloud, 1),
     averageTotalCloud: roundTo(factors.totalCloud, 1),
     windowPrecipitation: roundTo(windowPrecipitation, 2),
     priorRain: roundTo(factors.recentRain, 2),
@@ -222,12 +250,12 @@ export function buildFallbackForecastPayload(): ForecastPayload {
   const todayKey = getDateInTimezone(new Date(), ISLA_VISTA_COORDS.timezone);
 
   const fallbackScenarios: SunsetInputFactors[] = [
-    { highCloud: 8, midCloud: 15, lowCloud: 82, totalCloud: 86, recentRain: 0.4, visibility: 8, dewPointSpread: 1.5, windSpeed: 14, windDirection: 260, pm25: 14, aerosolOpticalDepth: 0.12, relativeHumidity: 88, directRadiation: 40, diffuseRadiation: 60, cloudVariance: 200, confidenceDecay: 0, previousDayScore: -1 },
-    { highCloud: 18, midCloud: 22, lowCloud: 74, totalCloud: 68, recentRain: 0.8, visibility: 14, dewPointSpread: 2.5, windSpeed: 12, windDirection: 248, pm25: 12, aerosolOpticalDepth: 0.1, relativeHumidity: 78, directRadiation: 80, diffuseRadiation: 70, cloudVariance: 350, confidenceDecay: 0.15, previousDayScore: -1 },
-    { highCloud: 14, midCloud: 34, lowCloud: 78, totalCloud: 52, recentRain: 0.6, visibility: 12, dewPointSpread: 2.2, windSpeed: 10, windDirection: 242, pm25: 11, aerosolOpticalDepth: 0.1, relativeHumidity: 80, directRadiation: 70, diffuseRadiation: 65, cloudVariance: 400, confidenceDecay: 0.3, previousDayScore: -1 },
-    { highCloud: 12, midCloud: 62, lowCloud: 34, totalCloud: 35, recentRain: 1.2, visibility: 28, dewPointSpread: 6.2, windSpeed: 11, windDirection: 75, pm25: 7, aerosolOpticalDepth: 0.08, relativeHumidity: 52, directRadiation: 200, diffuseRadiation: 90, cloudVariance: 180, confidenceDecay: 0.45, previousDayScore: -1 },
-    { highCloud: 54, midCloud: 48, lowCloud: 58, totalCloud: 84, recentRain: 1.1, visibility: 22, dewPointSpread: 5.3, windSpeed: 8, windDirection: 82, pm25: 8, aerosolOpticalDepth: 0.08, relativeHumidity: 58, directRadiation: 150, diffuseRadiation: 100, cloudVariance: 250, confidenceDecay: 0.6, previousDayScore: -1 },
-    { highCloud: 20, midCloud: 34, lowCloud: 24, totalCloud: 40, recentRain: 1.4, visibility: 35, dewPointSpread: 8.4, windSpeed: 9, windDirection: 62, pm25: 5, aerosolOpticalDepth: 0.06, relativeHumidity: 42, directRadiation: 280, diffuseRadiation: 60, cloudVariance: 120, confidenceDecay: 0.75, previousDayScore: -1 },
+    { highCloud: 8, midCloud: 15, lowCloud: 82, horizonLowCloud: 76, totalCloud: 86, recentRain: 0.4, visibility: 8, dewPointSpread: 1.5, windSpeed: 14, windDirection: 260, pm25: 14, aerosolOpticalDepth: 0.12, relativeHumidity: 88, directRadiation: 40, diffuseRadiation: 60, cloudVariance: 200, confidenceDecay: 0, previousDayScore: -1 },
+    { highCloud: 18, midCloud: 22, lowCloud: 74, horizonLowCloud: 68, totalCloud: 68, recentRain: 0.8, visibility: 14, dewPointSpread: 2.5, windSpeed: 12, windDirection: 248, pm25: 12, aerosolOpticalDepth: 0.1, relativeHumidity: 78, directRadiation: 80, diffuseRadiation: 70, cloudVariance: 350, confidenceDecay: 0.15, previousDayScore: -1 },
+    { highCloud: 14, midCloud: 34, lowCloud: 78, horizonLowCloud: 70, totalCloud: 52, recentRain: 0.6, visibility: 12, dewPointSpread: 2.2, windSpeed: 10, windDirection: 242, pm25: 11, aerosolOpticalDepth: 0.1, relativeHumidity: 80, directRadiation: 70, diffuseRadiation: 65, cloudVariance: 400, confidenceDecay: 0.3, previousDayScore: -1 },
+    { highCloud: 12, midCloud: 62, lowCloud: 34, horizonLowCloud: 26, totalCloud: 35, recentRain: 1.2, visibility: 28, dewPointSpread: 6.2, windSpeed: 11, windDirection: 75, pm25: 7, aerosolOpticalDepth: 0.08, relativeHumidity: 52, directRadiation: 200, diffuseRadiation: 90, cloudVariance: 180, confidenceDecay: 0.45, previousDayScore: -1 },
+    { highCloud: 54, midCloud: 48, lowCloud: 58, horizonLowCloud: 48, totalCloud: 84, recentRain: 1.1, visibility: 22, dewPointSpread: 5.3, windSpeed: 8, windDirection: 82, pm25: 8, aerosolOpticalDepth: 0.08, relativeHumidity: 58, directRadiation: 150, diffuseRadiation: 100, cloudVariance: 250, confidenceDecay: 0.6, previousDayScore: -1 },
+    { highCloud: 20, midCloud: 34, lowCloud: 24, horizonLowCloud: 16, totalCloud: 40, recentRain: 1.4, visibility: 35, dewPointSpread: 8.4, windSpeed: 9, windDirection: 62, pm25: 5, aerosolOpticalDepth: 0.06, relativeHumidity: 42, directRadiation: 280, diffuseRadiation: 60, cloudVariance: 120, confidenceDecay: 0.75, previousDayScore: -1 },
   ];
 
   const days = Array.from({ length: DAYS_TO_SHOW }, (_, index) => {
@@ -237,6 +265,7 @@ export function buildFallbackForecastPayload(): ForecastPayload {
       highCloud: clamp(scenario.highCloud, 0, 100),
       midCloud: clamp(scenario.midCloud, 0, 100),
       lowCloud: clamp(scenario.lowCloud, 0, 100),
+      horizonLowCloud: clamp(scenario.horizonLowCloud, 0, 100),
       totalCloud: clamp(scenario.totalCloud, 0, 100),
       recentRain: clamp(scenario.recentRain, 0, 8),
       visibility: clamp(scenario.visibility, 0, 50),
@@ -294,6 +323,7 @@ export function buildFallbackForecastPayload(): ForecastPayload {
 export function normalizeForecastPayload(
   raw: OpenMeteoForecastResponse,
   airQualityRaw?: OpenMeteoAirQualityResponse | null,
+  horizonRaw?: OpenMeteoHorizonResponse | null,
   source: ForecastPayload["source"] = "open-meteo",
 ): ForecastPayload {
   if (
@@ -306,10 +336,19 @@ export function normalizeForecastPayload(
 
   const timezone = raw.timezone || ISLA_VISTA_COORDS.timezone;
   const todayKey = getDateInTimezone(new Date(), timezone);
+  const yesterdayKey = addDaysToDateKey(todayKey, -1);
 
   const hourlyEpochs = raw.hourly.time.map((timestamp) => toMillis(timestamp));
   const airQualityLookup = buildAirQualityLookup(airQualityRaw);
+  const horizonLookup = buildHorizonLookup(horizonRaw);
   const days: ForecastDay[] = [];
+
+  /*
+   * Persistence anchor: weather patterns persist day to day, so today's
+   * score is gently pulled toward yesterday's. We score yesterday from its
+   * actual (past) hourly data instead of skipping it.
+   */
+  let previousScore = -1;
 
   for (let dayIndex = 0; dayIndex < raw.daily.time.length; dayIndex += 1) {
     if (days.length >= DAYS_TO_SHOW) {
@@ -318,9 +357,11 @@ export function normalizeForecastPayload(
 
     const dateKey = raw.daily.time[dayIndex];
 
-    if (!dateKey || dateKey < todayKey) {
+    if (!dateKey || dateKey < yesterdayKey) {
       continue;
     }
+
+    const isPastDay = dateKey < todayKey;
 
     const sunriseISO = raw.daily.sunrise[dayIndex];
     const sunsetISO = raw.daily.sunset[dayIndex];
@@ -398,10 +439,16 @@ export function normalizeForecastPayload(
       const lookup = airQualityLookup.get(raw.hourly.time[index] ?? "");
       return safeNumber(lookup?.aerosolOpticalDepth ?? 0.08);
     });
+    const horizonLowWindow = sunsetWindowIndices.map((index) => {
+      const probeValue = horizonLookup.get(raw.hourly.time[index] ?? "");
+      return probeValue === undefined
+        ? safeNumber(raw.hourly.cloud_cover_low[index])
+        : safeNumber(probeValue);
+    });
 
     const totalCloudVariance = variance(totalWindow) + variance(highWindow) * 0.5;
     const dayOffset = days.length;
-    const confidenceDecay = clamp(dayOffset * 0.18, 0, 0.85);
+    const confidenceDecay = isPastDay ? 0 : clamp(dayOffset * 0.18, 0, 0.85);
 
     const rainStartMillis = Math.floor((sunsetMillis - RAIN_LOOKBACK_START_MINUTES * 60 * 1000) / HOUR_MS) * HOUR_MS;
     const rainEndMillis = Math.ceil((sunsetMillis - RAIN_LOOKBACK_END_MINUTES * 60 * 1000) / HOUR_MS) * HOUR_MS;
@@ -413,6 +460,7 @@ export function normalizeForecastPayload(
       highCloud: roundTo(weightedAverage(highWindow, proximityWeights), 1),
       midCloud: roundTo(weightedAverage(midWindow, proximityWeights), 1),
       lowCloud: roundTo(weightedAverage(lowWindow, proximityWeights), 1),
+      horizonLowCloud: roundTo(weightedAverage(horizonLowWindow, proximityWeights), 1),
       totalCloud: roundTo(weightedAverage(totalWindow, proximityWeights), 1),
       recentRain: roundTo(priorRain, 2),
       visibility: roundTo(weightedAverage(visibilityWindow, proximityWeights) / 1000, 1),
@@ -435,8 +483,13 @@ export function normalizeForecastPayload(
       ),
       cloudVariance: roundTo(totalCloudVariance, 1),
       confidenceDecay,
-      previousDayScore: days.length > 0 ? days[days.length - 1].score : -1,
+      previousDayScore: isPastDay ? -1 : previousScore,
     };
+
+    if (isPastDay) {
+      previousScore = calculateSunsetScore(factors).score;
+      continue;
+    }
 
     const window = buildWindowSnapshot(
       windowStartMillis,
@@ -456,6 +509,7 @@ export function normalizeForecastPayload(
       window,
     );
 
+    previousScore = day.score;
     days.push(day);
   }
 

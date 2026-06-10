@@ -1,7 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CloudFog, CloudRain, CloudSun, Droplets, Eye, Layers3, Sparkles, Thermometer, Wind } from "lucide-react";
+import {
+  Cloud,
+  CloudFog,
+  CloudRain,
+  CloudSun,
+  Droplets,
+  Eye,
+  Sparkles,
+  Waves,
+  Wind,
+} from "lucide-react";
 import { type ComponentType } from "react";
 import type { ForecastDay } from "@/lib/types";
 import { clamp, roundTo } from "@/lib/utils";
@@ -12,7 +22,7 @@ interface ScoreBreakdownProps {
 
 interface BreakdownFactor {
   title: string;
-  value: number;
+  centerLabel: string;
   impact: number;
   meterValue: number;
   isPenalty: boolean;
@@ -28,23 +38,25 @@ function compassDirection(degrees: number) {
 }
 
 function toneFromFactor(factor: BreakdownFactor) {
+  const magnitude = Math.abs(factor.impact);
+
   if (factor.isPenalty) {
-    if (factor.impact >= 16) {
+    if (magnitude >= 16) {
       return { label: "Hurting", color: "text-rose-200" };
     }
 
-    if (factor.impact >= 7) {
+    if (magnitude >= 7) {
       return { label: "Risky", color: "text-orange-100" };
     }
 
     return { label: "Contained", color: "text-emerald-100" };
   }
 
-  if (factor.impact >= 14) {
+  if (magnitude >= 14) {
     return { label: "Helping", color: "text-cyan-100" };
   }
 
-  if (factor.impact >= 5) {
+  if (magnitude >= 5) {
     return { label: "Contributing", color: "text-indigo-100" };
   }
 
@@ -52,8 +64,8 @@ function toneFromFactor(factor: BreakdownFactor) {
 }
 
 function impactLabel(factor: BreakdownFactor) {
-  const value = roundTo(factor.impact, 1);
-  return factor.isPenalty ? `-${value}` : `+${value}`;
+  const value = roundTo(Math.abs(factor.impact), 1);
+  return factor.isPenalty || factor.impact < 0 ? `-${value}` : `+${value}`;
 }
 
 function ringStyle(factor: BreakdownFactor) {
@@ -72,140 +84,133 @@ function ringStyle(factor: BreakdownFactor) {
 }
 
 export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
+  const bd = today.factorBreakdown;
+  const f = today.factors;
+
   const factors: BreakdownFactor[] = [
     {
-      title: "High clouds",
-      value: today.factors.highCloud,
-      impact: today.factorBreakdown.highCloudContribution,
-      meterValue: today.factors.highCloud,
+      title: "Cloud canvas",
+      centerLabel: `${Math.round(bd.canvas * 100)}%`,
+      impact: bd.cloudCanvas,
+      meterValue: bd.canvas * 100,
       Icon: CloudSun,
       isPenalty: false,
       body:
-        today.factors.highCloud >= 25 && today.factors.highCloud <= 65
-          ? "Upper wisps are in the sweet spot to catch warm light."
-          : "Upper cloud coverage is outside the most photogenic range.",
-      metricLabel: `${roundTo(today.factors.highCloud, 1)}% in sunset window`,
+        bd.canvas >= 0.55
+          ? "Plenty of high and mid cloud to catch the post-sunset light — the show has a stage."
+          : bd.canvas >= 0.2
+            ? "Some paintable cloud overhead, but the canvas is thin in places."
+            : "Very little high or mid cloud — color has almost nothing to land on.",
+      metricLabel: `${roundTo(f.highCloud, 1)}% high · ${roundTo(f.midCloud, 1)}% mid in sunset window`,
     },
     {
-      title: "Mid clouds",
-      value: today.factors.midCloud,
-      impact: today.factorBreakdown.midCloudContribution,
-      meterValue: today.factors.midCloud,
-      Icon: Layers3,
-      isPenalty: false,
-      body:
-        today.factors.midCloud >= 20 && today.factors.midCloud <= 60
-          ? "Mid-level texture adds depth and layered color gradients."
-          : "Mid-layer structure is limited, so depth may feel flatter.",
-      metricLabel: `${roundTo(today.factors.midCloud, 1)}% in sunset window`,
-    },
-    {
-      title: "Low clouds",
-      value: today.factors.lowCloud,
-      impact: today.factorBreakdown.lowCloudPenalty,
-      meterValue: today.factors.lowCloud,
+      title: "Marine layer overhead",
+      centerLabel: `${Math.round(f.lowCloud)}%`,
+      impact: bd.marineLayerPenalty,
+      meterValue: f.lowCloud,
       Icon: CloudFog,
       isPenalty: true,
       body:
-        today.factorBreakdown.lowCloudPenalty < 10
-          ? "Marine layer pressure is relatively contained near the horizon."
-          : "Low cloud cover can block horizon light and mute strong glow.",
-      metricLabel: `${roundTo(today.factors.lowCloud, 1)}% in sunset window`,
+        bd.marineLayerPenalty < 8
+          ? "Low cloud over the bluffs is contained — the horizon line should stay visible."
+          : "Low cloud over IV itself is blocking the horizon, and no upper sky can fix that.",
+      metricLabel: `${roundTo(f.lowCloud, 1)}% low cloud in sunset window`,
     },
     {
-      title: "Recent rain",
-      value: today.factors.recentRain,
-      impact: today.factorBreakdown.rainBonus,
-      meterValue: clamp((today.factors.recentRain / 6) * 100, 0, 100),
-      Icon: CloudRain,
-      isPenalty: false,
+      title: "Offshore light path",
+      centerLabel: `${Math.round(f.horizonLowCloud)}%`,
+      impact: bd.horizonPenalty,
+      meterValue: f.horizonLowCloud,
+      Icon: Waves,
+      isPenalty: true,
       body:
-        today.factorBreakdown.rainBonus >= 2
-          ? "Recent moisture plus clearing can sharpen contrast and saturation."
-          : "Rain signal is low, so this factor likely has little influence.",
-      metricLabel: `${roundTo(today.factors.recentRain, 2)} mm prior rain`,
+        bd.horizonPenalty < 6
+          ? "The water west of IV looks open, so sunset light can travel in under the clouds."
+          : "A marine layer offshore sits on the light path — color may die over the channel before reaching IV.",
+      metricLabel: `${roundTo(f.horizonLowCloud, 1)}% low cloud ~30 km west of IV`,
     },
     {
-      title: "Saturation",
-      value: today.factors.dewPointSpread,
-      impact: Math.abs(today.factorBreakdown.dewPointModifier),
-      meterValue: today.factorBreakdown.dewPointModifier < 0
-        ? clamp(((4 - today.factors.dewPointSpread) / 4) * 100, 0, 100)
-        : clamp((today.factors.dewPointSpread / 12) * 100, 0, 100),
+      title: "Overcast ceiling",
+      centerLabel: `${Math.round(f.totalCloud)}%`,
+      impact: bd.overcastPenalty,
+      meterValue: f.totalCloud,
+      Icon: Cloud,
+      isPenalty: true,
+      body:
+        bd.overcastPenalty < 6
+          ? "Total cover leaves gaps for light to thread through."
+          : "The deck is close to solid — even good cloud texture goes dark under a sealed ceiling.",
+      metricLabel: `${roundTo(f.totalCloud, 1)}% total cloud in sunset window`,
+    },
+    {
+      title: "Fog & saturation",
+      centerLabel: `${roundTo(f.dewPointSpread, 1)}°C`,
+      impact: bd.fogPenalty,
+      meterValue: clamp(((4.5 - f.dewPointSpread) / 4.5) * 100, 0, 100),
       Icon: Droplets,
-      isPenalty: today.factorBreakdown.dewPointModifier < 0,
+      isPenalty: true,
       body:
-        today.factorBreakdown.dewPointModifier < -2.5
-          ? "Temperature and dew point are crowding together, which raises fog and horizon haze risk."
-          : today.factorBreakdown.dewPointModifier >= 1
-            ? "A healthier temperature-to-dew-point gap helps keep the low-level air from saturating."
-            : "Low-level moisture looks fairly neutral right now.",
-      metricLabel: `${roundTo(today.factors.dewPointSpread, 1)}°C temp/dew-point spread`,
+        bd.fogPenalty < 4
+          ? "The air has a healthy temperature-to-dew-point gap, so fog risk is low."
+          : "Temperature and dew point are crowding together — fog and horizon murk are a real threat.",
+      metricLabel: `${roundTo(f.dewPointSpread, 1)}°C spread · ${roundTo(f.relativeHumidity, 0)}% RH · ${roundTo(f.visibility, 1)} km vis`,
+    },
+    {
+      title: "Air vividness",
+      centerLabel: `${roundTo(f.visibility, 0)}km`,
+      impact: bd.vividnessModifier,
+      meterValue:
+        bd.vividnessModifier < 0
+          ? clamp(
+              ((Math.max(0, 11 - f.visibility) / 11) * 40) +
+                ((Math.max(0, f.pm25 - 15) / 25) * 40) +
+                ((Math.max(0, f.aerosolOpticalDepth - 0.28) / 0.27) * 20),
+              0,
+              100,
+            )
+          : clamp(((f.visibility / 35) * 60) + ((Math.max(0, 12 - f.pm25) / 12) * 40), 0, 100),
+      Icon: Eye,
+      isPenalty: bd.vividnessModifier < 0,
+      body:
+        bd.vividnessModifier <= -3
+          ? "Haze, smoke or muggy air is muting saturation — colors will look washed."
+          : bd.vividnessModifier >= 2
+            ? "Clean air with just enough aerosol to deepen the reds — color should stay crisp."
+            : "Air clarity is roughly neutral tonight.",
+      metricLabel: `${roundTo(f.visibility, 1)} km vis · PM2.5 ${roundTo(f.pm25, 1)} μg/m³ · AOD ${roundTo(f.aerosolOpticalDepth, 2)}`,
     },
     {
       title: "Wind",
-      value: today.factors.windSpeed,
-      impact: Math.abs(today.factorBreakdown.windModifier),
-      meterValue: clamp((today.factors.windSpeed / 28) * 100, 0, 100),
+      centerLabel: `${roundTo(f.windSpeed, 0)}km/h`,
+      impact: bd.windModifier,
+      meterValue: clamp((f.windSpeed / 28) * 100, 0, 100),
       Icon: Wind,
-      isPenalty: today.factorBreakdown.windModifier < 0,
+      isPenalty: bd.windModifier < 0,
       body:
-        today.factorBreakdown.windModifier >= 2.5
-          ? "Offshore or cross-shore flow may help keep the marine layer pushed back from the sunset line."
-          : today.factorBreakdown.windModifier <= -2.5
-            ? "Onshore flow can drag marine haze and low cloud back toward the horizon."
-            : "Wind direction looks mixed enough that it probably will not dominate the outcome.",
-      metricLabel: `${roundTo(today.factors.windSpeed, 1)} km/h from ${compassDirection(today.factors.windDirection)}`,
+        bd.windModifier >= 2.5
+          ? "Offshore (sundowner-style) flow is helping push the marine layer off the horizon."
+          : bd.windModifier <= -2.5
+            ? "Onshore flow can drag marine haze and low cloud back toward the sunset line."
+            : "Wind looks mixed enough that it probably will not decide the outcome.",
+      metricLabel: `${roundTo(f.windSpeed, 1)} km/h from ${compassDirection(f.windDirection)}`,
     },
     {
-      title: "Clarity",
-      value: today.factors.visibility,
-      impact: Math.abs(today.factorBreakdown.clarityModifier),
-      meterValue: today.factorBreakdown.clarityModifier < 0
-        ? clamp(
-            ((Math.max(0, 12 - today.factors.visibility) / 12) * 45) +
-              ((Math.max(0, today.factors.pm25 - 12) / 25) * 35) +
-              ((Math.max(0, today.factors.aerosolOpticalDepth - 0.12) / 0.18) * 20),
-            0,
-            100,
-          )
-        : clamp(
-            ((today.factors.visibility / 40) * 70) +
-              ((Math.max(0, 12 - today.factors.pm25) / 12) * 30),
-            0,
-            100,
-          ),
-      Icon: Eye,
-      isPenalty: today.factorBreakdown.clarityModifier < 0,
+      title: "Rain clearing",
+      centerLabel: `${roundTo(f.recentRain, 1)}mm`,
+      impact: bd.rainBonus,
+      meterValue: clamp((f.recentRain / 6) * 100, 0, 100),
+      Icon: CloudRain,
+      isPenalty: false,
       body:
-        today.factorBreakdown.clarityModifier < -2
-          ? "Poor visibility or elevated particulates are likely muting color and contrast."
-          : today.factorBreakdown.clarityModifier >= 2
-            ? "Clean air and good visibility should help the warm tones stay crisp."
-            : "Clarity looks moderate, so haze probably stays a secondary factor tonight.",
-      metricLabel: `${roundTo(today.factors.visibility, 1)} km vis · PM2.5 ${roundTo(today.factors.pm25, 1)} μg/m³ · AOD ${roundTo(today.factors.aerosolOpticalDepth, 2)}`,
-    },
-    {
-      title: "Humidity",
-      value: today.factors.relativeHumidity,
-      impact: Math.abs(today.factorBreakdown.humidityModifier),
-      meterValue: today.factors.relativeHumidity,
-      Icon: Thermometer,
-      isPenalty: today.factorBreakdown.humidityModifier < 0,
-      body:
-        today.factorBreakdown.humidityModifier >= 2
-          ? "Dry lower atmosphere keeps Rayleigh scattering pure and colors vivid."
-          : today.factorBreakdown.humidityModifier <= -2
-            ? "High surface humidity can wash out horizon contrast and mute warm tones."
-            : "Surface moisture levels look neutral for color quality.",
-      metricLabel: `${roundTo(today.factors.relativeHumidity, 0)}% relative humidity`,
+        bd.rainBonus >= 2
+          ? "Recent rain has scrubbed the air — post-storm clearing is the classic IV banger setup."
+          : "Rain signal is low, so this factor likely has little influence tonight.",
+      metricLabel: `${roundTo(f.recentRain, 2)} mm in the day before sunset`,
     },
   ];
 
   const veryClearSetup =
-    today.factors.highCloud < 8 &&
-    today.factors.midCloud < 8 &&
-    today.factors.totalCloud < 12;
+    f.highCloud < 8 && f.midCloud < 8 && f.totalCloud < 12;
 
   return (
     <section className="relative mx-auto w-full max-w-6xl px-6 py-24 md:px-10" id="breakdown">
@@ -225,9 +230,10 @@ export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
           A clear read on what&apos;s helping or hurting.
         </h2>
         <p className="mt-5 max-w-3xl text-sm text-white/70 md:text-base">
-          We evaluate the sky from 2 hours before sunset to 30 minutes after. Ring fill
-          shows measured signal. The impact number shows how much each factor shifted
-          tonight&apos;s score.
+          We evaluate the sky from 2 hours before sunset to 30 minutes after —
+          including the air over the water west of IV, where the sunset light
+          actually travels. Ring fill shows measured signal; the number shows
+          how many points each factor moved tonight&apos;s score.
         </p>
       </motion.div>
 
@@ -240,7 +246,8 @@ export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
       >
         <p>
           Data quality: {today.sunsetWindow.hourlyCount} hourly sample
-          {today.sunsetWindow.hourlyCount === 1 ? "" : "s"} near sunset
+          {today.sunsetWindow.hourlyCount === 1 ? "" : "s"} near sunset · light
+          path {Math.round(bd.lightPath * 100)}% open
         </p>
         <p className="inline-flex items-center gap-1.5">
           <Sparkles className="h-4 w-4" />
@@ -274,15 +281,7 @@ export function ScoreBreakdown({ today }: ScoreBreakdownProps) {
                   aria-hidden="true"
                 >
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-[#070d1f] text-[11px] uppercase tracking-[0.14em] text-white/65">
-                    {factor.title === "Recent rain"
-                      ? `${roundTo(factor.value, 1)}mm`
-                      : factor.title === "Clarity"
-                        ? `${roundTo(factor.value, 0)}km`
-                        : factor.title === "Wind"
-                          ? `${roundTo(factor.value, 0)}km/h`
-                          : factor.title === "Saturation"
-                            ? `${roundTo(factor.value, 1)}°C`
-                            : `${Math.round(factor.value)}%`}
+                    {factor.centerLabel}
                   </div>
                 </div>
 

@@ -140,52 +140,60 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
 
   const rows: BreakdownRow[] = [
     {
-      label: "High clouds",
-      value: bd.highCloudContribution,
-      maxPossible: 28,
+      label: "Cloud canvas",
+      value: bd.cloudCanvas,
+      maxPossible: 68,
       isPenalty: false,
-      detail: `${Math.round(today.factors.highCloud)}% cover`,
+      detail: `${Math.round(today.factors.highCloud)}% high · ${Math.round(today.factors.midCloud)}% mid`,
       barGradient: "from-amber-300/90 to-orange-400/80",
     },
     {
-      label: "Mid clouds",
-      value: bd.midCloudContribution,
-      maxPossible: 22,
+      label: "Clear-sky glow",
+      value: bd.clearSkyGlow,
+      maxPossible: 26,
       isPenalty: false,
-      detail: `${Math.round(today.factors.midCloud)}% cover`,
-      barGradient: "from-fuchsia-300/90 to-rose-400/80",
-    },
-    {
-      label: "Texture",
-      value: bd.textureContribution,
-      maxPossible: 10,
-      isPenalty: false,
-      detail: "cloud contrast",
+      detail: "open-horizon fade",
       barGradient: "from-cyan-300/90 to-sky-400/80",
     },
     {
-      label: "Low clouds",
-      value: bd.lowCloudPenalty,
-      maxPossible: 32,
+      label: "Marine layer",
+      value: bd.marineLayerPenalty,
+      maxPossible: 50,
       isPenalty: true,
-      detail: `${Math.round(today.factors.lowCloud)}% cover`,
+      detail: `${Math.round(today.factors.lowCloud)}% overhead`,
       barGradient: "from-rose-400/90 to-red-500/80",
+    },
+    {
+      label: "Offshore light path",
+      value: bd.horizonPenalty,
+      maxPossible: 40,
+      isPenalty: true,
+      detail: `${Math.round(today.factors.horizonLowCloud)}% offshore`,
+      barGradient: "from-rose-400/90 to-red-500/80",
+    },
+    {
+      label: "Fog risk",
+      value: bd.fogPenalty,
+      maxPossible: 30,
+      isPenalty: true,
+      detail: `${today.factors.dewPointSpread.toFixed(1)}°C spread`,
+      barGradient: "from-rose-400/90 to-red-500/80",
+    },
+    {
+      label: "Air clarity",
+      value: Math.abs(bd.vividnessModifier),
+      maxPossible: 10,
+      isPenalty: bd.vividnessModifier < 0,
+      detail: `${Math.round(today.factors.visibility)} km vis`,
+      barGradient: bd.vividnessModifier >= 0 ? "from-emerald-300/90 to-teal-400/80" : "from-rose-400/90 to-red-500/80",
     },
     {
       label: "Rain bonus",
       value: bd.rainBonus,
-      maxPossible: 5,
+      maxPossible: 6,
       isPenalty: false,
       detail: `${today.factors.recentRain.toFixed(1)} mm`,
       barGradient: "from-sky-300/90 to-indigo-400/80",
-    },
-    {
-      label: "Humidity",
-      value: Math.abs(bd.humidityModifier),
-      maxPossible: 4,
-      isPenalty: bd.humidityModifier < 0,
-      detail: `${Math.round(today.factors.relativeHumidity)}% RH`,
-      barGradient: bd.humidityModifier >= 0 ? "from-emerald-300/90 to-teal-400/80" : "from-rose-400/90 to-red-500/80",
     },
   ];
 
@@ -264,7 +272,7 @@ function FinalBreakdown({ today }: { today: ForecastDay }) {
 
       {/* Baseline note */}
       <div className="flex items-baseline justify-between border-t border-white/8 pt-2 text-[11px] text-white/40">
-        <span>Baseline: +{bd.baseline.toFixed(0)} · wind, saturation, and haze also nudge the score</span>
+        <span>Baseline: +{bd.baseline.toFixed(0)} · wind, overcast, and forecast stability also nudge the score</span>
         <span>Sunset at {today.sunsetTime}</span>
       </div>
     </div>
@@ -324,7 +332,7 @@ export function ScrollyExplainer({ today }: ScrollyExplainerProps) {
       {
         id: "final",
         title: "Tonight\u2019s result",
-        body: `Our model now blends cloud layers, horizon blockage, post-rain clearing, humidity, atmospheric clarity, radiation quality, and forecast confidence into a single sunset score. Tonight lands at ${today.score} with a ${today.label.toLowerCase()} outlook.`,
+        body: `Our model multiplies the cloud canvas by the light path — local marine layer, offshore cloud on the sunset line, overcast ceiling, and fog risk — then adjusts for air clarity, wind, rain clearing, and forecast confidence. Tonight lands at ${today.score} with a ${today.label.toLowerCase()} outlook.`,
         caption: `Score: ${today.score}/100 \u2014 ${today.label}`,
         highlight: "Combined score",
         scene: {
