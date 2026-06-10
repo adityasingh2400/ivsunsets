@@ -27,7 +27,12 @@ function buildOpenMeteoUrl() {
   url.searchParams.set("daily", "sunrise,sunset,precipitation_sum");
   url.searchParams.set("timezone", ISLA_VISTA_COORDS.timezone);
   url.searchParams.set("forecast_days", "7");
-  url.searchParams.set("past_days", "1");
+  /*
+   * past_days=2 so yesterday's 24h rain lookback (which reaches into the
+   * evening before) has full hourly coverage when scoring the persistence
+   * anchor.
+   */
+  url.searchParams.set("past_days", "2");
 
   return url;
 }
@@ -54,7 +59,7 @@ function buildHorizonProbeUrl() {
   url.searchParams.set("hourly", "cloud_cover_low");
   url.searchParams.set("timezone", ISLA_VISTA_COORDS.timezone);
   url.searchParams.set("forecast_days", "7");
-  url.searchParams.set("past_days", "1");
+  url.searchParams.set("past_days", "2");
 
   return url;
 }

@@ -13,6 +13,15 @@ const FEED_REVALIDATE_SECONDS = 600;
 const MAX_PULSE_ITEMS = 8;
 const MAX_ITEMS_PER_SOURCE = 3;
 
+/**
+ * Hard per-feed deadline. The pulse is decorative; the forecast response
+ * must never wait on a tarpitting news host.
+ */
+const FEED_TIMEOUT_MS = 4000;
+
+const FEED_USER_AGENT =
+  "Mozilla/5.0 (compatible; IVSunsets/1.0; +https://iv-sunsets.vercel.app)";
+
 const DAILY_NEXUS_IV_FEED = "https://dailynexus.com/category/news/isla_vista/feed/";
 const DAILY_NEXUS_BLOTTER_FEED = "https://dailynexus.com/category/news/police-blotter-news/feed/";
 const DAILY_NEXUS_MAIN_FEED = "https://dailynexus.com/feed/";
@@ -140,13 +149,22 @@ function collapseWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function safeCodePoint(code: number) {
+  if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return "";
+  try {
+    return String.fromCodePoint(code);
+  } catch {
+    return "";
+  }
+}
+
 function decodeHtmlEntities(value: string) {
+  // &amp; decodes LAST so double-encoded markup (&amp;lt;) stays inert text.
   return value
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(Number.parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_, code) => safeCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => safeCodePoint(Number.parseInt(code, 16)))
     .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#039;|&apos;/gi, "'")
     .replace(/&rsquo;|&lsquo;/gi, "'")
@@ -155,7 +173,13 @@ function decodeHtmlEntities(value: string) {
     .replace(/&mdash;/gi, "-")
     .replace(/&hellip;/gi, "...")
     .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">");
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&");
+}
+
+/** Belt and suspenders: feed titles must never carry markup into the API payload. */
+function stripMarkup(value: string) {
+  return collapseWhitespace(value.replace(/<[^>]+>/g, " "));
 }
 
 function stripHtml(value: string) {
@@ -194,9 +218,22 @@ function scoreMatches(text: string, patterns: Array<{ pattern: RegExp; weight: n
   return patterns.reduce((sum, entry) => sum + (entry.pattern.test(text) ? entry.weight : 0), 0);
 }
 
+/** Only plain web links survive — feed-supplied javascript:/data: URIs are dropped. */
+function isSafeHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function cleanUrl(value: string) {
   try {
     const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return "";
+    }
     for (const key of Array.from(url.searchParams.keys())) {
       if (key.startsWith("utm_")) {
         url.searchParams.delete(key);
@@ -204,7 +241,7 @@ function cleanUrl(value: string) {
     }
     return url.toString();
   } catch {
-    return value;
+    return "";
   }
 }
 
@@ -277,9 +314,8 @@ function buildFallbackPulse(): LocalPulseItem[] {
 
 async function fetchText(url: string) {
   const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; IVSunsets/1.0; +https://iv-sunsets.vercel.app)",
-    },
+    headers: { "User-Agent": FEED_USER_AGENT },
+    signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
     next: { revalidate: FEED_REVALIDATE_SECONDS },
   });
 
@@ -292,9 +328,8 @@ async function fetchText(url: string) {
 
 async function fetchJson<T>(url: string) {
   const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; IVSunsets/1.0; +https://iv-sunsets.vercel.app)",
-    },
+    headers: { "User-Agent": FEED_USER_AGENT },
+    signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
     next: { revalidate: FEED_REVALIDATE_SECONDS },
   });
 
@@ -342,16 +377,20 @@ async function fetchRssFeed(config: RssFeedConfig): Promise<LocalPulseItem[]> {
 
   return items
     .map((itemXml, index) => {
-      const rawTitle = extractTagValue(itemXml, "title");
+      // Cheap fields and early exits first — description decoding is the
+      // expensive part and most items get filtered before needing it.
+      const rawTitle = stripMarkup(extractTagValue(itemXml, "title"));
       const title = config.stripSuffix ? stripPublisherSuffix(rawTitle) : rawTitle;
-      const description = config.ignoreDescription ? "" : extractTagValue(itemXml, "description");
       const url = extractTagValue(itemXml, "link");
       const publishedAt = extractTagValue(itemXml, "pubDate");
+
+      if (!title || !isSafeHttpUrl(url)) return null;
+      if (ageInHours(publishedAt) > config.maxAgeDays * 24) return null;
+
+      const description = config.ignoreDescription ? "" : extractTagValue(itemXml, "description");
       const categories = extractTagValues(itemXml, "category");
       const textBlob = `${title} ${description} ${categories.join(" ")}`;
 
-      if (!title || !url) return null;
-      if (ageInHours(publishedAt) > config.maxAgeDays * 24) return null;
       if (LOCAL_EXPLICIT_FILTER.test(textBlob)) return null;
       if (categories.some((value) => /\bnexustentialism|opinion\b/i.test(value))) return null;
       if (config.requireRegion && !SB_REGION_REQUIRED.test(textBlob)) return null;
@@ -446,7 +485,7 @@ async function fetchCampusCalendarHotEvents() {
         .join(" ")
         .trim();
 
-      if (!title || !url) return null;
+      if (!title || !isSafeHttpUrl(url)) return null;
       if (CALENDAR_HARD_NO.test(textBlob)) return null;
 
       const startTime = timeValue(startsAt);
@@ -510,8 +549,10 @@ function dedupeAndRank(items: LocalPulseItem[]) {
 }
 
 /**
- * Interleave two local items per global item, capping any single source so
- * one prolific feed cannot monopolize the bird.
+ * Interleave two local items per global item. The per-source cap is
+ * best-effort: when every remaining item comes from already-capped sources
+ * (e.g. only one feed answered), we fill the lineup anyway rather than
+ * show the bird an empty sky.
  */
 function buildLineup(localItems: LocalPulseItem[], globalItems: LocalPulseItem[]) {
   const sourceCounts = new Map<string, number>();

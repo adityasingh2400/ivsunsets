@@ -441,8 +441,9 @@ export function normalizeForecastPayload(
     });
     const horizonLowWindow = sunsetWindowIndices.map((index) => {
       const probeValue = horizonLookup.get(raw.hourly.time[index] ?? "");
+      // Probe missing → assume the offshore deck mirrors the local one.
       return probeValue === undefined
-        ? safeNumber(raw.hourly.cloud_cover_low[index])
+        ? safeNumber(raw.hourly.cloud_cover_low?.[index])
         : safeNumber(probeValue);
     });
 

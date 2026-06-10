@@ -181,6 +181,44 @@ check(
   "expected pull toward ~42 without crossing it",
 );
 
+const prevGreat = calculateSunsetScore(factors({ previousDayScore: 90 }));
+const prevNone = calculateSunsetScore(factors({ previousDayScore: -1 }));
+const prevAwful = calculateSunsetScore(factors({ previousDayScore: 5 }));
+check(
+  `Persistence pulls toward yesterday (${prevAwful.score} ≤ ${prevNone.score} ≤ ${prevGreat.score})`,
+  prevAwful.score <= prevNone.score &&
+    prevNone.score <= prevGreat.score &&
+    prevGreat.score > prevAwful.score,
+  "expected a monotone pull with a nonzero spread",
+);
+check(
+  "Persistence modifier is clamped to ±3",
+  Math.abs(prevAwful.factorBreakdown.persistenceModifier) <= 3 &&
+    Math.abs(prevGreat.factorBreakdown.persistenceModifier) <= 3 &&
+    prevAwful.factorBreakdown.persistenceModifier !== 0,
+  `got ${prevAwful.factorBreakdown.persistenceModifier} / ${prevGreat.factorBreakdown.persistenceModifier}`,
+);
+
+const offshoreNW = calculateSunsetScore(factors({ windDirection: 330, windSpeed: 12 }));
+const offshoreNE = calculateSunsetScore(factors({ windDirection: 40, windSpeed: 12 }));
+const onshoreSW = calculateSunsetScore(factors({ windDirection: 220, windSpeed: 12 }));
+const offshoreGale = calculateSunsetScore(factors({ windDirection: 40, windSpeed: 35 }));
+check(
+  `Offshore flow beats onshore for the same sky (${offshoreNE.score} > ${onshoreSW.score})`,
+  offshoreNE.score > onshoreSW.score,
+  "expected offshore bonus and onshore penalty to separate",
+);
+check(
+  "Offshore sector wraps through north (330° ≡ 40°)",
+  offshoreNW.factorBreakdown.windModifier === offshoreNE.factorBreakdown.windModifier,
+  `got ${offshoreNW.factorBreakdown.windModifier} vs ${offshoreNE.factorBreakdown.windModifier}`,
+);
+check(
+  "Offshore bonus fades at gale speeds",
+  offshoreGale.factorBreakdown.windModifier < 1,
+  `got ${offshoreGale.factorBreakdown.windModifier}`,
+);
+
 /* ------------------------------------------------------------------ */
 /*  Monotonicity                                                       */
 /* ------------------------------------------------------------------ */
@@ -233,11 +271,13 @@ console.log("\nBreakdown reconciliation");
 
 let reconciled = true;
 let reconcileDetail = "";
+let reconciledCount = 0;
 
 for (const scenario of scenarios) {
   const result = calculateSunsetScore(scenario.input);
   if (result.score <= 0 || result.score >= 100) continue;
   if (result.factorBreakdown.lightPath <= 0.05) continue; // light-path floor breaks exact identity
+  reconciledCount += 1;
 
   const b = result.factorBreakdown;
   const sum =
@@ -263,6 +303,11 @@ for (const scenario of scenarios) {
 }
 
 check("Breakdown terms sum to the score", reconciled, reconcileDetail);
+check(
+  `Reconciliation actually covered scenarios (${reconciledCount} checked)`,
+  reconciledCount >= 4,
+  "too many scenarios skipped — the identity check went vacuous",
+);
 
 /* ------------------------------------------------------------------ */
 /*  Distribution over plausible IV evenings                            */

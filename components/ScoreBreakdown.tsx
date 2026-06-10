@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { type ComponentType } from "react";
 import type { ForecastDay } from "@/lib/types";
-import { clamp, roundTo } from "@/lib/utils";
+import { clamp, compassDirection, roundTo } from "@/lib/utils";
 
 interface ScoreBreakdownProps {
   today: ForecastDay;
@@ -29,12 +29,6 @@ interface BreakdownFactor {
   Icon: ComponentType<{ className?: string }>;
   body: string;
   metricLabel: string;
-}
-
-function compassDirection(degrees: number) {
-  const headings = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  const normalized = ((degrees % 360) + 360) % 360;
-  return headings[Math.round(normalized / 45) % headings.length];
 }
 
 function toneFromFactor(factor: BreakdownFactor) {

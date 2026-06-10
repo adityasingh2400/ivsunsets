@@ -132,20 +132,29 @@ Each day returns:
 - `65–84` → `Great`
 - `85–100` → `Unreal`
 
-### Major Scoring Factors
+### Scoring Model (v3, gated)
 
-Implemented in [lib/scoreSunset.ts](/Users/aditya/Desktop/IVSunsets/lib/scoreSunset.ts).
+Implemented in [lib/scoreSunset.ts](lib/scoreSunset.ts) and pinned by an
+executable spec (`npm run sanity` → `scripts/score-sanity.ts`).
 
-- high cloud support
-- mid cloud support
-- texture support
-- low cloud penalty
-- recent rain bonus
-- contrast bonus
-- dew point spread modifier
-- wind modifier
-- clarity / haze modifier
-- baseline score
+The score multiplies a cloud canvas by a light path instead of adding
+bonuses:
+
+- **Cloud canvas** — high cirrus and mid altocumulus, the surfaces that
+  light up (worth up to ~68 points)
+- **Light path** — multiplicative gates that can each collapse the night:
+  local marine layer, offshore low cloud at a probe point ~30 km west of
+  IV on the sunset light path, overcast ceiling, and fog saturation
+- **Vividness** — air clarity multiplier from visibility, PM2.5, aerosol
+  optical depth, and humidity (moderate aerosol deepens color)
+- **Bonuses** — post-rain clearing, offshore (sundowner) flow, forecast
+  stability
+- **Stabilizers** — persistence pull toward yesterday's score (computed
+  from actual past hourly data) and a blend toward the IV climatological
+  mean for low-confidence far-out days
+
+A clean clear sky floors out around 35 — pleasant, not fireworks. A solid
+marine layer collapses the score no matter how good the upper sky looks.
 
 ## API Behavior
 
@@ -154,7 +163,8 @@ Forecast data is served from [app/api/forecast/route.ts](/Users/aditya/Desktop/I
 Behavior:
 
 - primary source is Open-Meteo
-- air-quality data is fetched in parallel
+- air-quality data and an offshore low-cloud probe (~30 km west of IV) are fetched in parallel
+- news feed fetches carry a hard 4s timeout so a slow host can never stall the forecast
 - local pulse data is attached to the payload
 - API responses are normalized into a shared frontend shape
 - fallback forecast data is returned if upstream fetches fail

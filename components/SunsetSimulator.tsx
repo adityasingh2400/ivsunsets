@@ -28,7 +28,7 @@ import {
 } from "react";
 import type { SunsetInputFactors } from "@/lib/types";
 import { calculateSunsetScore, effectiveTotalCloud } from "@/lib/scoreSunset";
-import { cn, lerp, roundTo } from "@/lib/utils";
+import { cn, compassDirection, lerp, roundTo } from "@/lib/utils";
 import { SkyCanvas } from "@/components/SkyCanvas";
 
 interface SunsetSimulatorProps {
@@ -54,12 +54,6 @@ interface SliderGroup {
   title: string;
   hint: string;
   sliders: SliderConfig[];
-}
-
-function compassDirection(degrees: number) {
-  const headings = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  const normalized = ((degrees % 360) + 360) % 360;
-  return headings[Math.round(normalized / 45) % headings.length];
 }
 
 const pct = (value: number) => `${Math.round(value)}%`;
@@ -524,8 +518,19 @@ export function SunsetSimulator({
                               const nextValue = Number(event.target.value);
                               window.cancelAnimationFrame(tweenRef.current);
                               setActivePreset("custom");
+                              /*
+                               * Once the user takes manual control, neutralize the
+                               * hidden forecast-only inputs (reported total cloud,
+                               * confidence decay, persistence anchor) so the score
+                               * is driven entirely by the visible sliders. Without
+                               * this, tonight's reported totalCloud kept gating the
+                               * score invisibly after the layers were dragged away.
+                               */
                               setFactors((current) => ({
                                 ...current,
+                                totalCloud: 0,
+                                confidenceDecay: 0,
+                                previousDayScore: -1,
                                 [config.key]: nextValue,
                               }));
                             }}

@@ -110,6 +110,12 @@ export function addDaysToDateKey(dateKey: string, days: number) {
   return dateKeyFromDate(utcDate);
 }
 
+export function compassDirection(degrees: number) {
+  const headings = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const normalized = ((degrees % 360) + 360) % 360;
+  return headings[Math.round(normalized / 45) % headings.length];
+}
+
 export function safeNumber(value: unknown) {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return 0;

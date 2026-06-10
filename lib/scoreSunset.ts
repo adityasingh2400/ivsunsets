@@ -1,3 +1,5 @@
+// Relative imports (not "@/lib/...") so scripts/score-sanity.ts can run this
+// module directly under `npx tsx` without alias resolution.
 import {
   type ScoreLabel,
   type SunsetInputFactors,
@@ -230,7 +232,6 @@ interface EngineTerms {
   canvas: number;
   lightPath: number;
   vividness: number;
-  gates: LightPathGates;
   cloudCanvas: number;
   clearSkyGlow: number;
   vividnessPoints: number;
@@ -289,7 +290,6 @@ function computeTerms(factors: SunsetInputFactors): EngineTerms {
     canvas,
     lightPath: gates.lightPath,
     vividness,
-    gates,
     cloudCanvas,
     clearSkyGlow,
     vividnessPoints,
