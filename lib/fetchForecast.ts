@@ -26,7 +26,9 @@ export async function fetchForecast(signal?: AbortSignal) {
   }
 
   // Defensive backfill in case a pre-v3 payload ever slips through a cache.
-  for (const day of payload.days) {
+  // `today` is a distinct object from `days[0]` after JSON deserialization,
+  // so it needs the same treatment.
+  for (const day of [...payload.days, payload.today]) {
     if (day?.factors && typeof day.factors.horizonLowCloud !== "number") {
       day.factors.horizonLowCloud = day.factors.lowCloud ?? 0;
     }

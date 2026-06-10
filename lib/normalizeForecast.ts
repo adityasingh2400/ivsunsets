@@ -141,13 +141,13 @@ function buildSunsetProximityWeights(
 function buildHorizonLookup(raw?: OpenMeteoHorizonResponse | null) {
   const lookup = new Map<string, number>();
 
-  if (!raw?.hourly?.time?.length) {
+  if (!raw?.hourly?.time?.length || !raw.hourly.cloud_cover_low?.length) {
     return lookup;
   }
 
   for (let index = 0; index < raw.hourly.time.length; index += 1) {
     const time = raw.hourly.time[index];
-    const value = raw.hourly.cloud_cover_low[index];
+    const value = raw.hourly.cloud_cover_low?.[index];
     if (!time || typeof value !== "number" || Number.isNaN(value)) continue;
     lookup.set(time, value);
   }
@@ -167,8 +167,8 @@ function buildAirQualityLookup(raw?: OpenMeteoAirQualityResponse | null) {
     if (!time) continue;
 
     lookup.set(time, {
-      pm25: raw.hourly.pm2_5[index] ?? 8,
-      aerosolOpticalDepth: raw.hourly.aerosol_optical_depth[index] ?? 0.08,
+      pm25: raw.hourly.pm2_5?.[index] ?? 8,
+      aerosolOpticalDepth: raw.hourly.aerosol_optical_depth?.[index] ?? 0.08,
     });
   }
 

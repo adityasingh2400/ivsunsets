@@ -172,6 +172,7 @@ const PRESETS: SkyPreset[] = [
 /* ------------------------------------------------------------------ */
 
 function AnimatedScore({ value }: { value: number }) {
+  const reduceMotion = useReducedMotion();
   const spring = useSpring(value, { stiffness: 140, damping: 24 });
   const [display, setDisplay] = useState(value);
 
@@ -183,7 +184,7 @@ function AnimatedScore({ value }: { value: number }) {
     setDisplay(Math.round(latest));
   });
 
-  return <>{display}</>;
+  return <>{reduceMotion ? value : display}</>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -196,6 +197,7 @@ interface ChartRow {
 }
 
 function ContributionChart({ rows }: { rows: ChartRow[] }) {
+  const reduceMotion = useReducedMotion();
   const visible = rows.filter((row) => Math.abs(row.value) >= 0.3);
 
   if (!visible.length) {
@@ -226,7 +228,11 @@ function ContributionChart({ rows }: { rows: ChartRow[] }) {
                     : "bg-gradient-to-r from-rose-400/85 to-red-500/75",
                 )}
                 animate={{ width: `${width}%` }}
-                transition={{ type: "spring", stiffness: 170, damping: 26 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 170, damping: 26 }
+                }
               />
             </div>
             <p
@@ -291,8 +297,17 @@ export function SunsetSimulator({
         const t = Math.min(1, (now - start) / duration);
         const eased = 1 - Math.pow(1 - t, 3);
 
-        setFactors((current) => {
-          const next = { ...current };
+        /*
+         * Non-tweened keys (reported total cloud, variance, decay,
+         * persistence) take the target value from the FIRST frame —
+         * snapping them at the end caused a visible score pop after
+         * every morph.
+         */
+        setFactors(() => {
+          if (t >= 1) {
+            return { ...target };
+          }
+          const next = { ...target };
           for (const key of TWEENED_KEYS) {
             const fromValue = from[key];
             let toValue = target[key];
@@ -301,10 +316,10 @@ export function SunsetSimulator({
               const delta = ((toValue - fromValue + 540) % 360) - 180;
               toValue = fromValue + delta;
             }
-            next[key] = lerp(fromValue, toValue, eased);
-          }
-          if (t >= 1) {
-            return { ...target };
+            const value = lerp(fromValue, toValue, eased);
+            // keep mid-tween wind in [0,360) so a mid-morph slider grab
+            // can never persist an out-of-range angle
+            next[key] = key === "windDirection" ? ((value % 360) + 360) % 360 : value;
           }
           return next;
         });
@@ -529,6 +544,7 @@ export function SunsetSimulator({
                               setFactors((current) => ({
                                 ...current,
                                 totalCloud: 0,
+                                cloudVariance: 100,
                                 confidenceDecay: 0,
                                 previousDayScore: -1,
                                 [config.key]: nextValue,

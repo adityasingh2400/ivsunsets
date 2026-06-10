@@ -515,7 +515,9 @@ async function fetchCampusCalendarHotEvents() {
         url,
         source: "Campus heat",
         kind: "event",
-        publishedAt: new Date(event.updated_at || event.created_at || startsAt).toISOString(),
+        publishedAt: new Date(
+          timeValue(event.updated_at) || timeValue(event.created_at) || timeValue(startsAt) || Date.now(),
+        ).toISOString(),
         startsAt,
         locationLabel: locationLabel || event.geo?.city || "UCSB",
         tags: [...topics, ...eventTypes].slice(0, 6),
