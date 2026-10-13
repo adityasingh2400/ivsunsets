@@ -84,14 +84,22 @@ export default function SunsetMap({
       maxZoom: 17,
     });
 
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-        subdomains: "abcd",
-        maxZoom: 19,
-      },
-    ).addTo(map);
+    /* Esri Dark Gray Canvas: keyless raster tiles. CARTO's basemaps now
+       require an API key and serve an "API KEY REQUIRED" tile without one. */
+    const esriTiles = (layer: string) =>
+      `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
+
+    L.tileLayer(esriTiles("World_Dark_Gray_Base"), {
+      attribution:
+        'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+      maxNativeZoom: 16,
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.tileLayer(esriTiles("World_Dark_Gray_Reference"), {
+      maxNativeZoom: 16,
+      maxZoom: 19,
+    }).addTo(map);
 
     /* Fit all spots into view with padding */
     const bounds = L.latLngBounds(

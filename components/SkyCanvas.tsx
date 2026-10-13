@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
+import { CarouselNearContext } from "@/components/CircularCarousel";
 import { cn, clamp } from "@/lib/utils";
 import * as sky from "@/lib/skyRenderer";
 
@@ -30,6 +31,7 @@ export function SkyCanvas({
 }: SkyCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  const isNear = useContext(CarouselNearContext);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -45,7 +47,11 @@ export function SkyCanvas({
     let frameId = 0;
 
     const draw = (timestamp: number) => {
-      const { width: cssW, height: cssH } = canvas.getBoundingClientRect();
+      /* clientWidth/Height ignore ancestor transforms. getBoundingClientRect
+         would report the carousel's scaled size, reallocating the canvas
+         backing store on every scroll frame. */
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, Math.floor(cssW));
       const h = Math.max(1, Math.floor(cssH));
@@ -80,7 +86,7 @@ export function SkyCanvas({
     window.addEventListener("resize", onResize);
     draw(performance.now());
 
-    if (!prefersReducedMotion && animated) {
+    if (!prefersReducedMotion && animated && isNear) {
       frameId = window.requestAnimationFrame(tick);
     }
 
@@ -88,7 +94,7 @@ export function SkyCanvas({
       window.removeEventListener("resize", onResize);
       if (frameId) window.cancelAnimationFrame(frameId);
     };
-  }, [animated, colorIntensity, highCloud, lowCloud, midCloud, prefersReducedMotion, rain, score, totalCloud]);
+  }, [animated, colorIntensity, highCloud, isNear, lowCloud, midCloud, prefersReducedMotion, rain, score, totalCloud]);
 
   return <canvas ref={canvasRef} className={cn("h-full w-full", className)} aria-hidden="true" />;
 }

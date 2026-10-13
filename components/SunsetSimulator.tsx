@@ -369,15 +369,17 @@ export function SunsetSimulator({
     <section
       id={bare ? undefined : "simulator"}
       className={cn(
-        "relative overflow-hidden bg-[#040610]",
-        bare ? "flex h-full min-h-[100dvh] w-full flex-1 flex-col" : "mx-auto w-full max-w-6xl px-6 py-24 md:px-10",
+        "relative bg-[#040610]",
+        bare
+          ? "flex w-full flex-1 flex-col overflow-x-clip"
+          : "mx-auto w-full max-w-6xl overflow-hidden px-6 py-24 md:px-10",
       )}
     >
       <div className="pointer-events-none absolute left-10 top-6 h-36 w-36 rounded-full bg-[radial-gradient(circle,rgba(255,175,122,0.16),rgba(255,175,122,0))] blur-2xl" />
       <div className="pointer-events-none absolute right-[-4rem] top-12 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(120,162,255,0.18),rgba(120,162,255,0))] blur-3xl" />
       <div className="sunset-noise absolute inset-0 opacity-[0.08]" />
 
-      <div className={cn("relative z-10", bare ? "px-5 py-6 md:px-10 md:py-8" : "")}>
+      <div className={cn("relative z-10", bare ? "px-5 pb-28 pt-24 md:px-10 md:pb-32" : "")}>
         <div className={cn("mx-auto w-full max-w-6xl", bare && "flex flex-1 flex-col")}>
           <div className={cn("max-w-3xl space-y-3", !bare && "mb-6")}>
             <p className="text-xs uppercase tracking-[0.22em] text-white/55">
@@ -427,7 +429,10 @@ export function SunsetSimulator({
 
           <div className={cn("mt-5 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]", bare && "flex-1")}>
             <motion.div
-              className="relative overflow-hidden rounded-[2.2rem] border border-white/12 bg-black/30 shadow-[0_28px_85px_rgba(4,10,30,0.48)]"
+              className={cn(
+                "relative overflow-hidden rounded-[2.2rem] border border-white/12 bg-black/30 shadow-[0_28px_85px_rgba(4,10,30,0.48)]",
+                bare && "lg:sticky lg:top-24 lg:h-[calc(100dvh-14rem)] lg:self-start",
+              )}
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.25 }}

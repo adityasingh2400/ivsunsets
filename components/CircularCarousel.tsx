@@ -2,12 +2,14 @@
 
 import { useScroll, useMotionValueEvent } from "framer-motion";
 import {
+  createContext,
   useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { smoothScrollTo } from "@/components/SmoothScrollProvider";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -27,6 +29,10 @@ interface Props {
 const MOBILE_BREAKPOINT = 767;
 const SWIPE_THRESHOLD = 48;
 
+/** True while a section is the active card or one of its neighbours.
+ *  Animated children (canvas skies) idle when this is false. */
+export const CarouselNearContext = createContext(true);
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -38,9 +44,14 @@ export function CircularCarousel({ sections }: Props) {
   const labelRef = useRef<HTMLParagraphElement>(null);
   const countRef = useRef<HTMLParagraphElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef(0);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const posRef = useRef(0);
+  const rotationRef = useRef(0);
+  const containerTopRef = useRef(0);
+  const extraRef = useRef<number[]>([]);
   const activeIdxRef = useRef(0);
   const prevZRef = useRef<number[]>([]);
+  const prevOffsetRef = useRef<number[]>([]);
   const dimsRef = useRef({ w: 1200, h: 800 });
   const swipeRef = useRef({
     pointerId: -1,
@@ -56,16 +67,47 @@ export function CircularCarousel({ sections }: Props) {
     window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches,
   );
   const [activeIndex, setActiveIndex] = useState(0);
+  const [preloadAll, setPreloadAll] = useState(false);
+  const [dwellTotal, setDwellTotal] = useState(0);
   const isMobileRef = useRef(isMobile);
 
   const n = sections.length;
   const stepAngle = 360 / n;
   const LOOPS = 2;
+  const totalStops = LOOPS * n;
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
+  const { scrollY } = useScroll();
+
+  /* ------------------------------------------------------------------
+   * Scroll track: every stop is a 100vh rotation, preceded by a "dwell"
+   * for sections taller than the viewport. During a dwell the carousel
+   * holds still and the section's content scrolls instead, so nothing is
+   * stranded below the fold.
+   * ---------------------------------------------------------------- */
+  const dwellAt = (k: number) =>
+    k < totalStops ? (extraRef.current[k % n] ?? 0) : 0;
+
+  /** Track offset (px) where each stop's dwell begins; last entry = end. */
+  const stopStarts = () => {
+    const h = dimsRef.current.h;
+    const starts = [0];
+    for (let k = 0; k < totalStops; k++) {
+      starts.push(starts[k] + dwellAt(k) + h);
+    }
+    return starts;
+  };
+
+  /** Rotation, measured in stops, for a track offset. */
+  const rotationAt = (pos: number, starts: number[]) => {
+    const h = dimsRef.current.h;
+    for (let k = 0; k < totalStops; k++) {
+      if (pos < starts[k + 1]) {
+        const turnStart = starts[k] + dwellAt(k);
+        return pos <= turnStart ? k : k + (pos - turnStart) / h;
+      }
+    }
+    return totalStops;
+  };
 
   const setCarouselIndex = (idx: number) => {
     const normalized = ((idx % n) + n) % n;
@@ -73,7 +115,7 @@ export function CircularCarousel({ sections }: Props) {
     setActiveIndex((prev) => (prev === normalized ? prev : normalized));
   };
 
-  const indexFromProgress = (v: number) => Math.round(v * LOOPS * n) % n;
+  const indexFromRotation = (rot: number) => Math.round(rot) % n;
 
   const scrollToIndex = (idx: number) => {
     const normalized = ((idx % n) + n) % n;
@@ -83,29 +125,20 @@ export function CircularCarousel({ sections }: Props) {
       return;
     }
 
-    const container = containerRef.current;
-    if (!container || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
-    const totalStops = LOOPS * n;
-    const candidates = Array.from({ length: LOOPS }, (_, loop) =>
-      (loop * n + normalized) / totalStops,
-    );
+    const current = rotationRef.current;
+    let target = normalized;
+    for (let k = normalized + n; k < totalStops; k += n) {
+      if (Math.abs(k - current) < Math.abs(target - current)) target = k;
+    }
 
-    const current = progressRef.current;
-    const targetProgress = candidates.reduce((closest, candidate) =>
-      Math.abs(candidate - current) < Math.abs(closest - current)
-        ? candidate
-        : closest,
-    );
+    smoothScrollTo(containerTopRef.current + stopStarts()[target]);
+  };
 
-    const containerTop = window.scrollY + container.getBoundingClientRect().top;
-    const travel = container.offsetHeight - window.innerHeight;
-    const targetY = containerTop + Math.max(0, travel) * targetProgress;
-
-    window.scrollTo({
-      top: targetY,
-      behavior: "smooth",
-    });
+  const syncFromScroll = () => {
+    posRef.current = window.scrollY - containerTopRef.current;
+    tick();
   };
 
   /* ---------- Responsive dimensions ---------- */
@@ -130,9 +163,8 @@ export function CircularCarousel({ sections }: Props) {
       setIsMobile(mobile);
 
       if (!mobile) {
-        const nextProgress = scrollYProgress.get();
-        progressRef.current = nextProgress;
-        setCarouselIndex(indexFromProgress(nextProgress));
+        syncFromScroll();
+        setCarouselIndex(indexFromRotation(rotationRef.current));
         return;
       }
 
@@ -143,7 +175,7 @@ export function CircularCarousel({ sections }: Props) {
     media.addEventListener("change", syncMode);
     return () => media.removeEventListener("change", syncMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollYProgress, n]);
+  }, [n]);
 
   /* ------------------------------------------------------------------
    * HOT PATH — runs every scroll frame.
@@ -152,9 +184,11 @@ export function CircularCarousel({ sections }: Props) {
    * `onActiveChange` which fires ~5 times during the full scroll.
    * ---------------------------------------------------------------- */
   const tick = () => {
-    const rotation = isMobileRef.current
-      ? activeIdxRef.current * stepAngle
-      : progressRef.current * LOOPS * 360;
+    const mobile = isMobileRef.current;
+    const starts = stopStarts();
+    if (!mobile) rotationRef.current = rotationAt(posRef.current, starts);
+    const rot = mobile ? activeIdxRef.current : rotationRef.current;
+    const rotation = rot * stepAngle;
     const { w, h } = dimsRef.current;
     const RX = w * 0.34;
     const RY = h * 0.18;
@@ -170,7 +204,9 @@ export function CircularCarousel({ sections }: Props) {
       const y = -(1 - Math.cos(rad)) * RY;
       const dist = Math.min(raw, 360 - raw) / 180;
 
-      const scale = 0.18 + 0.82 * Math.pow(Math.max(0, 1 - dist), 1.4);
+      /* Cards are full-screen sized, so neighbours need a steeper falloff
+         to land at roughly card size (~0.4) one stop away. */
+      const scale = 0.13 + 0.87 * Math.pow(Math.max(0, 1 - dist), 2.2);
       const opacity = Math.max(0.03, Math.pow(Math.max(0, 1 - dist), 1.6));
 
       /* GPU-composited only — zero layout / paint cost */
@@ -182,6 +218,22 @@ export function CircularCarousel({ sections }: Props) {
       if (prevZRef.current[i] !== z) {
         prevZRef.current[i] = z;
         el.style.zIndex = String(z);
+      }
+
+      /* Dwell: scroll the card itself (not a transform) so sticky
+         children keep working. Mobile cards scroll natively instead. */
+      const card = cardsRef.current[i];
+      if (card && !mobile) {
+        let k = i + n * Math.round((rot - i) / n);
+        if (k > totalStops) k -= n;
+        if (k < 0) k += n;
+        const offset = Math.round(
+          Math.min(Math.max(posRef.current - starts[k], 0), dwellAt(k)),
+        );
+        if (prevOffsetRef.current[i] !== offset) {
+          prevOffsetRef.current[i] = offset;
+          card.scrollTop = offset;
+        }
       }
     }
   };
@@ -275,13 +327,12 @@ export function CircularCarousel({ sections }: Props) {
     }
   };
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
+  useMotionValueEvent(scrollY, "change", () => {
     if (isMobileRef.current) return;
 
-    progressRef.current = v;
-    tick();
+    syncFromScroll();
 
-    const idx = indexFromProgress(v);
+    const idx = indexFromRotation(rotationRef.current);
     if (idx !== activeIdxRef.current) {
       setCarouselIndex(idx);
     }
@@ -293,6 +344,61 @@ export function CircularCarousel({ sections }: Props) {
     tick();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex, isMobile]);
+
+  /* ---------- Measure sections taller than the viewport ---------- */
+  useEffect(() => {
+    const measure = () => {
+      const container = containerRef.current;
+      if (container) {
+        containerTopRef.current =
+          container.getBoundingClientRect().top + window.scrollY;
+      }
+
+      let changed = false;
+      for (let i = 0; i < n; i++) {
+        const card = cardsRef.current[i];
+
+        /* Mobile cards scroll natively, so they never dwell */
+        const overflow =
+          card && !isMobileRef.current ? card.scrollHeight - card.clientHeight : 0;
+        const extra = overflow > 4 ? overflow : 0;
+        if (extraRef.current[i] !== extra) {
+          extraRef.current[i] = extra;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setDwellTotal(LOOPS * extraRef.current.reduce((sum, e) => sum + e, 0));
+      }
+      prevOffsetRef.current = [];
+      if (isMobileRef.current) tick();
+      else syncFromScroll();
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    for (const card of cardsRef.current) {
+      if (card) ro.observe(card);
+      if (card?.firstElementChild) ro.observe(card.firstElementChild);
+    }
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, isMobile, preloadAll, n]);
+
+  /* Mount every section once the page is idle. Rendering only the near
+     ones made far cards swap a spinner for real content (and back) while
+     they were still visible mid-rotation. */
+  useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(() => setPreloadAll(true), {
+        timeout: 2000,
+      });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(() => setPreloadAll(true), 800);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -332,7 +438,11 @@ export function CircularCarousel({ sections }: Props) {
   return (
     <div
       ref={containerRef}
-      style={{ height: isMobile ? "100dvh" : `${n * LOOPS * 100 + 100}vh` }}
+      style={{
+        height: isMobile
+          ? "100dvh"
+          : `calc(${totalStops * 100 + 100}vh + ${dwellTotal}px)`,
+      }}
       className="touch-action-pan-y"
     >
       <div
@@ -373,14 +483,21 @@ export function CircularCarousel({ sections }: Props) {
                   : undefined,
               }}
             >
-              <div className="carousel-card">
-                {near ? (
-                  sec.content
-                ) : (
-                  <div className="flex h-56 items-center justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white/40" />
-                  </div>
-                )}
+              <div
+                ref={(el) => {
+                  cardsRef.current[i] = el;
+                }}
+                className="carousel-card"
+              >
+                <CarouselNearContext.Provider value={near}>
+                  {near || preloadAll ? (
+                    sec.content
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-white/40" />
+                    </div>
+                  )}
+                </CarouselNearContext.Provider>
               </div>
             </div>
           );

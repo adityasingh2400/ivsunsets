@@ -8,6 +8,18 @@ interface SmoothScrollProviderProps {
   children: React.ReactNode;
 }
 
+let activeLenis: Lenis | null = null;
+
+/** Scroll the window, going through Lenis when it is driving the page.
+ *  A native smooth scroll gets overridden if Lenis is mid-animation. */
+export function smoothScrollTo(top: number) {
+  if (activeLenis) {
+    activeLenis.scrollTo(top);
+  } else {
+    window.scrollTo({ top, behavior: "smooth" });
+  }
+}
+
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   const prefersReducedMotion = useReducedMotion();
 
@@ -30,6 +42,7 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       wheelMultiplier: 0.92,
       touchMultiplier: 1.1,
     });
+    activeLenis = lenis;
 
     let frameId = 0;
 
@@ -42,6 +55,7 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
 
     return () => {
       window.cancelAnimationFrame(frameId);
+      if (activeLenis === lenis) activeLenis = null;
       lenis.destroy();
     };
   }, [prefersReducedMotion]);

@@ -73,7 +73,7 @@ export function ForecastGrid({ days, bestDate }: Props) {
   const path = trendPath(days);
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-[#040610]">
+    <div className="relative flex flex-1 flex-col overflow-x-clip bg-[#040610]">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -86,7 +86,7 @@ export function ForecastGrid({ days, bestDate }: Props) {
       />
       <div className="sunset-noise absolute inset-0 opacity-[0.11]" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-5 py-6 md:px-10 md:py-8 lg:grid lg:grid-cols-[1.02fr_0.98fr] lg:gap-6">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-5 pb-28 pt-24 md:px-10 md:pb-32 lg:grid lg:grid-cols-[1.02fr_0.98fr] lg:gap-6">
         <motion.div
           className="flex flex-col gap-4"
           initial={{ opacity: 0, y: 20 }}
@@ -142,7 +142,7 @@ export function ForecastGrid({ days, bestDate }: Props) {
             </div>
           </div>
 
-          <div className="relative min-h-[23rem] overflow-hidden rounded-[2rem] border border-white/14 bg-black/18 shadow-[0_26px_90px_rgba(2,5,16,0.36)] backdrop-blur-xl md:min-h-[28rem]">
+          <div className="relative min-h-[23rem] overflow-hidden rounded-[2rem] border border-white/14 bg-black/18 shadow-[0_26px_90px_rgba(2,5,16,0.36)] backdrop-blur-xl md:min-h-[28rem] lg:sticky lg:top-24">
             <SkyCanvas
               className="absolute inset-0"
               score={selected.score}

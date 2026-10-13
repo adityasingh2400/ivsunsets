@@ -311,8 +311,10 @@ export function SunsetSpots({
   return (
     <section
       className={cn(
-        "relative overflow-hidden bg-[#040610]",
-        bare ? "flex w-full flex-1 flex-col" : "mx-auto w-full max-w-6xl rounded-[2rem]",
+        "relative bg-[#040610]",
+        bare
+          ? "flex w-full flex-1 flex-col overflow-x-clip"
+          : "mx-auto w-full max-w-6xl overflow-hidden rounded-[2rem]",
       )}
     >
       <div
@@ -327,7 +329,7 @@ export function SunsetSpots({
       />
       <div className="sunset-noise absolute inset-0 opacity-[0.1]" />
 
-      <div className={cn("relative z-10", bare ? "px-5 py-6 md:px-10 md:py-8" : "px-6 py-8 md:px-8 md:py-10")}>
+      <div className={cn("relative z-10", bare ? "px-5 pb-28 pt-24 md:px-10 md:pb-32" : "px-6 py-8 md:px-8 md:py-10")}>
         <motion.div
           className="mx-auto flex w-full max-w-6xl flex-col gap-5"
           initial={bare ? false : { opacity: 0, y: 20 }}
