@@ -145,25 +145,24 @@ html.lenis body {
 /*  Carousel cards                                                    */
 /* ------------------------------------------------------------------ */
 
+/* Every card is laid out at full-screen size all the time; the carousel's
+   transform scale is what makes off-axis cards look small. Never animate
+   width/height here: resizing a card when it gains or loses focus reflows
+   its content mid-rotation, which shows up as a visible snap. */
 .carousel-card {
   display: flex;
   flex-direction: column;
-  width: min(96vw, 920px);
-  max-height: 76vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border-radius: 1.5rem;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 2.25rem;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: #080e1e;
   box-shadow: 0 24px 80px rgba(2, 4, 14, 0.6);
   transition:
-    width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    background 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -174,14 +173,10 @@ html.lenis body {
 
 /* Focused = full-screen immersive takeover, zero chrome */
 .carousel-card.focused {
-  width: 100%;
-  height: 100%;
-  max-height: none;
   border-radius: 0;
   border-color: transparent;
   background: #040610;
   box-shadow: none;
-  overflow: hidden;
 }
 
 @media (max-width: 767px) {

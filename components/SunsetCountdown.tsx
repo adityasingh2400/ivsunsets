@@ -205,8 +205,10 @@ export function SunsetCountdown({ today, bare = false }: SunsetCountdownProps) {
   const content = (
     <div
       className={cn(
-        "relative isolate overflow-hidden bg-[#040610]",
-        bare ? "flex h-full min-h-[100dvh] flex-1 flex-col" : "rounded-[2rem]",
+        "relative isolate bg-[#040610]",
+        bare
+          ? "flex flex-1 flex-col overflow-x-clip"
+          : "overflow-hidden rounded-[2rem]",
       )}
     >
       <SkyCanvas
@@ -235,7 +237,7 @@ export function SunsetCountdown({ today, bare = false }: SunsetCountdownProps) {
       <div
         className={cn(
           "relative z-10 flex flex-1 flex-col",
-          bare ? "px-5 py-6 md:px-10 md:py-8" : "px-6 py-8 md:px-8 md:py-10",
+          bare ? "px-5 pb-28 pt-24 md:px-10 md:pb-32" : "px-6 py-8 md:px-8 md:py-10",
         )}
       >
         <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-6">

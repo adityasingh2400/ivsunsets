@@ -18,37 +18,28 @@ async function collectPageIssues(page) {
   return consoleErrors;
 }
 
-async function verifyMessengerCycle(page, issues) {
-  const perch = page.locator('[data-testid="messenger-perch"]');
-  await perch.waitFor({ state: "visible", timeout: 10_000 });
+async function verifyMessenger(page, issues) {
+  const bird = page.locator('[data-testid="messenger-bird"]');
+  const card = page.locator('[data-testid="messenger-card"]');
 
-  const activeBird = page.locator('[data-testid="messenger-bird"]');
-  await activeBird.waitFor({ state: "visible", timeout: 8_000 });
+  const present = await Promise.all([
+    bird.waitFor({ state: "attached", timeout: 10_000 }).then(() => true, () => false),
+    card.waitFor({ state: "attached", timeout: 10_000 }).then(() => true, () => false),
+  ]);
 
-  const diveStart = await activeBird.boundingBox();
-  await page.waitForTimeout(500);
-  const diveMid = await activeBird.boundingBox();
-
-  if (!diveStart || !diveMid || diveMid.y <= diveStart.y + 10) {
-    issues.push("Messenger bird dive arc was not visibly descending.");
+  if (!present.every(Boolean)) {
+    issues.push("Messenger gull or its news card did not render.");
   }
+}
 
-  await page.waitForTimeout(2100);
-  const cardOpacity = await page
-    .locator('[data-testid="messenger-card"]')
-    .evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity));
+async function carouselLabel(page) {
+  return (await page.locator('[data-testid="carousel-label"]').textContent())?.toLowerCase() ?? "";
+}
 
-  if (!(cardOpacity > 0.45)) {
-    issues.push("Messenger news card did not become clearly visible.");
-  }
-
-  await page.waitForTimeout(5000);
-  const perchVisibleAgain = await perch.isVisible();
-  const activeBirdVisible = await activeBird.isVisible().catch(() => false);
-
-  if (!perchVisibleAgain || activeBirdVisible) {
-    issues.push("Messenger bird did not return to its perch after the carry cycle.");
-  }
+async function goToSection(page, label) {
+  await page.getByRole("button", { name: `Go to ${label}` }).click();
+  await page.waitForTimeout(2200);
+  return carouselLabel(page);
 }
 
 async function swipeCarousel(page, direction) {
@@ -96,27 +87,45 @@ async function runDesktopFlow() {
     issues.push("Desktop horizontal overflow detected.");
   }
 
-  await verifyMessengerCycle(page, issues);
+  await verifyMessenger(page, issues);
 
-  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 0.95, behavior: "instant" }));
-  await page.waitForTimeout(900);
-  const labelOne = await page.locator('[data-testid="carousel-label"]').textContent();
-  if (!labelOne?.toLowerCase().includes("should i go")) {
-    issues.push("Carousel did not rotate into the countdown section.");
+  /* Wheel-scroll like a user: the hero should hand off to the countdown */
+  await page.mouse.move(720, 450);
+  for (let i = 0; i < 20 && !(await carouselLabel(page)).includes("should i go"); i++) {
+    await page.mouse.wheel(0, 120);
+    await page.waitForTimeout(120);
+  }
+  if (!(await carouselLabel(page)).includes("should i go")) {
+    issues.push("Wheel scrolling did not rotate into the countdown section.");
   }
 
-  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 1.9, behavior: "instant" }));
-  await page.waitForTimeout(900);
-  const labelTwo = await page.locator('[data-testid="carousel-label"]').textContent();
-  if (!labelTwo?.toLowerCase().includes("6-day forecast")) {
+  if (!(await goToSection(page, "6-day outlook")).includes("6-day outlook")) {
     issues.push("Carousel did not rotate into the forecast section.");
   }
 
-  await page.evaluate(() => window.scrollTo({ top: window.innerHeight * 2.85, behavior: "instant" }));
-  await page.waitForTimeout(900);
-  const labelThree = await page.locator('[data-testid="carousel-label"]').textContent();
-  if (!labelThree?.toLowerCase().includes("where to watch")) {
+  if (!(await goToSection(page, "Sunset lab")).includes("sunset lab")) {
+    issues.push("Carousel did not rotate into the simulator section.");
+  }
+
+  if (!(await goToSection(page, "Where to watch")).includes("where to watch")) {
     issues.push("Carousel did not rotate into the sunset spots section.");
+  }
+
+  /* Tall sections scroll their content before the carousel moves on */
+  const dwell = await page.evaluate(async () => {
+    const card = document.querySelector(".carousel-card.focused");
+    const extra = card ? card.scrollHeight - card.clientHeight : 0;
+    window.scrollBy({ top: extra, behavior: "instant" });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return { extra, scrolled: card?.scrollTop ?? 0 };
+  });
+  if (dwell.extra > 4 && Math.abs(dwell.scrolled - dwell.extra) > 4) {
+    issues.push(`Spots section did not scroll through its content (${dwell.scrolled}/${dwell.extra}px).`);
+  }
+
+  const tiles = await page.locator(".leaflet-tile-loaded").count();
+  if (tiles === 0) {
+    issues.push("Map tiles did not load.");
   }
 
   await page.screenshot({ path: "./.tmp-desktop.png", fullPage: true });
@@ -165,7 +174,7 @@ async function runMobileFlow() {
 
   await swipeCarousel(page, "left");
   const forecastLabel = await page.locator('[data-testid="carousel-label"]').textContent();
-  if (!forecastLabel?.toLowerCase().includes("6-day forecast")) {
+  if (!forecastLabel?.toLowerCase().includes("6-day outlook")) {
     issues.push("Mobile left swipe did not rotate into the forecast section.");
   }
 

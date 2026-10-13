@@ -279,7 +279,7 @@ export function TonightCard({ today, pulse }: Props) {
       <SkyBirds horizonPct={76.5} newsItems={pulse} />
 
       <div className="relative z-10 flex h-full flex-1 flex-col px-6 py-8 md:px-10">
-        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center pt-[8vh] text-center">
+        <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center pt-[max(8vh,6.5rem)] text-center md:pt-[8vh]">
           <p className="text-[11px] uppercase tracking-[0.22em] text-white/42">
             Isla Vista cliffline outlook
           </p>
